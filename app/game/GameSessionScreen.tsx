@@ -1880,7 +1880,7 @@ export function GameSessionScreen({
             )}
             <div className="cast-checklist"><span>✓ 同一 Wi-Fi</span><span>✓ 电视开启接收</span><span>✓ iPhone 不锁屏</span><span>✓ 电视比例选自动 / 16:9</span></div>
             <div className="cast-guide-actions"><button type="button" onClick={closeCastGuide}>稍后再投</button><button type="button" onClick={enterTelevisionMode}><small>连接电视后点击</small><b>切换为原生清晰单屏 →</b></button></div>
-            <footer>清晰度优先使用电视自带 AirPlay；第三方接收端请选最高画质。语音仍使用 iPhone 麦克风，电视太响会干扰识别时可适当调低音量。</footer>
+            <footer>iPhone 横屏比 16:9 电视更宽，完整屏幕镜像出现上下黑边属于正常现象；电视端选择“填满/裁切”可去掉黑边，但会裁掉左右画面。语音仍使用 iPhone 麦克风。</footer>
           </section>
         </div>
       )}
