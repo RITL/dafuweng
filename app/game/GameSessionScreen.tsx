@@ -22,6 +22,7 @@ import { advanceGameTurn, moveActivePlayer, rollRoulette } from "./session";
 import type { RouletteResult } from "./session";
 import { calculateAssetBreakdown, createSettlementRanking } from "./settlement";
 import { shouldUseNativeMirrorLayout } from "./display";
+import { parseSpokenNumber } from "./voice";
 import type { UiSound } from "./use-game-audio";
 import type { BoardTile, CityTile, GameSession, OwnedProperty, PlayerState } from "./types";
 
@@ -100,26 +101,6 @@ interface SpeechRecognitionLike {
 }
 
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
-
-const parseSpokenNumber = (transcript: string): number | null => {
-  const speech = transcript.normalize("NFKC");
-  const arabic = speech.match(/(?:^|\D)(2[0-4]|1\d|\d)(?:\D|$)/);
-  if (arabic) return Number(arabic[1]);
-  const normalized = speech
-    .replace(/答案是|答案|一共|总共|等于|就是|应该是|应该|是|点|个|呀|啊|吧|呢|哦|啦|\s|，|。|！|!|？|\?/g, "")
-    .replace(/两|俩/g, "二")
-    .replace(/幺/g, "一")
-    .replace(/洞/g, "零");
-  const chineseToken = normalized.match(/[零一二三四五六七八九十]{1,3}/)?.[0] ?? normalized;
-  const digits: Record<string, number> = { 零: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
-  if (chineseToken === "十") return 10;
-  if (chineseToken.includes("十")) {
-    const [tens, ones] = chineseToken.split("十");
-    const value = (tens ? digits[tens] : 1) * 10 + (ones ? digits[ones] : 0);
-    return value >= 0 && value <= 24 ? value : null;
-  }
-  return chineseToken in digits ? digits[chineseToken] : null;
-};
 
 const phaseCopy: Record<TurnPhase, { eyebrow: string; title: string }> = {
   ready: { eyebrow: "等待旅行家确认", title: "转动轮盘，决定前进步数" },
@@ -570,13 +551,23 @@ export function GameSessionScreen({
       }, delay);
     };
     recognition.lang = "zh-CN";
-    recognition.continuous = mode === "answer";
+    recognition.continuous = false;
     recognition.interimResults = mode === "answer";
     recognition.maxAlternatives = 5;
+    let listeningWatchdog: number | null = null;
+    const clearListeningWatchdog = () => {
+      if (listeningWatchdog !== null) window.clearTimeout(listeningWatchdog);
+      listeningWatchdog = null;
+    };
     recognition.onresult = (event) => {
       const result = event.results[event.results.length - 1];
-      const alternatives = Array.from(result ?? []).map((item) => item.transcript?.trim() ?? "").filter(Boolean);
-      const transcript = alternatives[0] ?? "";
+      const latestAlternatives = Array.from(result ?? []).map((item) => item.transcript?.trim() ?? "").filter(Boolean);
+      const combinedTranscript = Array.from(event.results ?? [])
+        .map((speechResult) => speechResult[0]?.transcript?.trim() ?? "")
+        .filter(Boolean)
+        .join("，");
+      const alternatives = Array.from(new Set([combinedTranscript, ...latestAlternatives].filter(Boolean)));
+      const transcript = combinedTranscript || latestAlternatives[0] || "";
       if (mode === "start") {
         handled = true;
         setVoiceStatus(`听到：“${transcript}”`);
@@ -598,7 +589,8 @@ export function GameSessionScreen({
         speak("我没有听清，我会继续等你。请说继续，或者等一下。", () => startVoiceListening("start", targetSession));
         return;
       }
-      const isFinal = result?.isFinal !== false;
+      const completionRequested = alternatives.some((item) => /完毕|回答完毕/.test(item));
+      const isFinal = completionRequested || result?.isFinal !== false;
       const answers = alternatives.map(parseSpokenNumber).filter((value): value is number => value !== null);
       const expectedAnswer = pendingRollRef.current?.total;
       const correctAnswer = expectedAnswer === undefined ? undefined : answers.find((answer) => answer === expectedAnswer);
@@ -622,13 +614,14 @@ export function GameSessionScreen({
       setVoiceVisualState("heard");
       const answer = answers[0] ?? null;
       if (answer === null) {
-        speak("我没有听清数字，请再说一次。", () => startVoiceListening("answer", targetSession));
+        speak(completionRequested ? "我听到完毕了，但是没有听到数字。请先说答案，再说完毕。" : "我没有听清数字，请再说一次。", () => startVoiceListening("answer", targetSession));
       } else {
         submitMathAnswer(answer);
       }
     };
     recognition.onerror = (event) => {
       if (recognitionRef.current !== recognition) return;
+      clearListeningWatchdog();
       const permissionDenied = event.error === "not-allowed" || event.error === "service-not-allowed";
       handled = permissionDenied;
       setVoiceStatus(permissionDenied
@@ -643,6 +636,7 @@ export function GameSessionScreen({
     };
     recognition.onend = () => {
       if (recognitionRef.current !== recognition) return;
+      clearListeningWatchdog();
       if (!handled) {
         setVoiceStatus(mode === "answer" ? "我还在听，请说出答案" : "没有听清，可点击屏幕按钮");
         setVoiceVisualState(mode === "answer" ? "listening" : "idle");
@@ -655,8 +649,22 @@ export function GameSessionScreen({
       if (recognitionRef.current !== recognition) return;
       try {
         recognition.start();
-        setVoiceStatus(mode === "start" ? "正在听：继续 / 等一下" : "麦克风已开启，请说出答案");
+        setVoiceStatus(mode === "start" ? "正在听：继续 / 等一下" : "麦克风已开启；没反应可说“答案，完毕”");
         setVoiceVisualState("listening");
+        if (mode === "answer") {
+          listeningWatchdog = window.setTimeout(() => {
+            if (recognitionRef.current !== recognition || turnPhaseRef.current !== "answering" || answerLockedRef.current) return;
+            recognitionRef.current = null;
+            try {
+              recognition.abort();
+            } catch {
+              // The recognizer may already have ended between the check and abort.
+            }
+            setVoiceStatus("没有收到答案，正在重新开启麦克风");
+            setVoiceVisualState("listening");
+            window.setTimeout(() => startVoiceListening("answer", targetSession, false), 180);
+          }, 6500);
+        }
       } catch {
         recognitionRef.current = null;
         setVoiceStatus(mode === "answer" ? "麦克风暂时忙碌，正在重新听" : "麦克风暂不可用，可点击按钮");
@@ -669,7 +677,7 @@ export function GameSessionScreen({
       setVoiceStatus("提示音后开始回答…");
       setRecognizedTranscript("");
       setVoiceVisualState("requesting");
-      window.setTimeout(activateRecognition, 260);
+      window.setTimeout(activateRecognition, tvMode ? 900 : 360);
     } else activateRecognition();
   };
 
@@ -1133,7 +1141,7 @@ export function GameSessionScreen({
       setMathFeedback(`${answer} 还不对，再看看两个小球吧`);
       setVoiceStatus(`回答 ${answer}，再想一想`);
       playUiSound("remove");
-      if (originSession.voiceEnabled) speak(`很接近啦，再想一想。${roll.first}加${roll.second}等于多少？`, () => startVoiceListening("answer", originSession));
+      if (originSession.voiceEnabled) speak(`很接近啦，再想一想。${roll.first}加${roll.second}等于多少？没反应时，可以在答案后面说完毕。`, () => startVoiceListening("answer", originSession));
       return;
     }
     answerLockedRef.current = true;
@@ -1152,7 +1160,7 @@ export function GameSessionScreen({
     window.speechSynthesis?.cancel();
     const microphoneReady = await prepareMicrophone();
     if (!microphoneReady) return;
-    speak(`${roll.first}加${roll.second}等于多少？请说出答案。`, () => startVoiceListening("answer", originSession));
+    speak(`${roll.first}加${roll.second}等于多少？请说出答案。没反应时，可以在答案后面说完毕。`, () => startVoiceListening("answer", originSession));
   };
 
   const completeRouletteSpin = (requestedSession: GameSession | null, roll: RouletteResult) => {
@@ -1173,7 +1181,7 @@ export function GameSessionScreen({
     if (rollingPlayer.isChild) {
       changeTurnPhase("answering");
       setMathFeedback(`请让 ${rollingPlayer.name} 算一算`);
-      if (originSession.voiceEnabled) speak(`${roll.first}加${roll.second}等于多少？请说出答案。`, () => startVoiceListening("answer", originSession));
+      if (originSession.voiceEnabled) speak(`${roll.first}加${roll.second}等于多少？请说出答案。没反应时，可以在答案后面说完毕。`, () => startVoiceListening("answer", originSession));
       else {
         setVoiceStatus("语音已关闭，请点击数字回答");
         setVoiceVisualState("off");
@@ -1498,7 +1506,7 @@ export function GameSessionScreen({
   const resumeGameInteraction = () => {
     if (!sessionRef.current.voiceEnabled) return;
     if (turnPhaseRef.current === "answering" && pendingRollRef.current) {
-      speak(`${pendingRollRef.current.first}加${pendingRollRef.current.second}等于多少？请说出答案。`, () => startVoiceListening("answer", sessionRef.current));
+      speak(`${pendingRollRef.current.first}加${pendingRollRef.current.second}等于多少？请说出答案。没反应时，可以在答案后面说完毕。`, () => startVoiceListening("answer", sessionRef.current));
     } else if (assetManagerOpenRef.current) {
       startFinancialListening("assets", sessionRef.current);
     } else if (landingDecisionRef.current) {
@@ -1616,7 +1624,7 @@ export function GameSessionScreen({
   const closeDialogAndResume = () => {
     setDialog(null);
     if (turnPhaseRef.current === "answering" && pendingRollRef.current) {
-      if (session.voiceEnabled) speak("我们继续。两个小球加起来，一共是多少点？", () => startVoiceListening("answer", session));
+      if (session.voiceEnabled) speak("我们继续。两个小球加起来，一共是多少点？没反应时，可以在答案后说完毕。", () => startVoiceListening("answer", session));
     } else if (turnPhaseRef.current === "ready") {
       window.setTimeout(() => announceTurn(session), 180);
     }

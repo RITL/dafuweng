@@ -627,7 +627,7 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
 }
 
 @media (min-width: 900px) and (orientation: landscape) {
-  .game-shell.tv-mode .game-topbar { width: calc(100% - 24px); min-height: 43px; height: 43px; grid-template-columns: 1fr auto; }
+  .game-shell.tv-mode .game-topbar, .game-shell.tv-mode .round-progress { display: none; }
   .game-shell.tv-mode .game-brand small, .game-shell.tv-mode .autosave-state, .game-shell.tv-mode .undo-action, .game-shell.tv-mode .game-toolbar > .game-text-action { display: none; }
   .game-shell.tv-mode .game-toolbar { display: none; }
   .game-shell.tv-mode .game-icon-action, .game-shell.tv-mode .cast-button, .game-shell.tv-mode .rules-button, .game-shell.tv-mode .settle-button { height: 46px; min-width: 46px; border-radius: 14px; }
@@ -636,7 +636,7 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
   .game-shell.tv-mode .rail-player { min-width: 0; min-height: 43px; padding: 4px 6px; }
   .game-shell.tv-mode .rail-avatar { width: 31px; height: 31px; flex-basis: 31px; font-size: 19px; }
   .game-shell.tv-mode .rail-name b { font-size: 9px; }.game-shell.tv-mode .rail-name small { font-size: 7px; }.game-shell.tv-mode .rail-money small { display: none; }.game-shell.tv-mode .rail-money b { font-size: 8px; }
-  .game-shell.tv-mode .control-deck { width: calc(100% - 24px); height: calc(100dvh - 95px); grid-template-columns: 130px minmax(0,1fr) 125px; gap: 7px; }
+  .game-shell.tv-mode .control-deck { width: calc(100% - 24px); height: calc(100dvh - 49px); grid-template-columns: 130px minmax(0,1fr) 125px; gap: 7px; }
   .game-shell.tv-mode .current-player-card { padding: 10px 7px; border-radius: 15px; }
   .game-shell.tv-mode .current-avatar { width: 56px; height: 56px; margin: 5px auto 4px; }.game-shell.tv-mode .current-avatar > span { font-size: 34px; }.game-shell.tv-mode .current-player-card h1 { font-size: 17px; }.game-shell.tv-mode .current-player-card > p { display: none; }
   .game-shell.tv-mode .asset-total { padding: 8px 5px; }.game-shell.tv-mode .asset-total small { font-size: 8px; }.game-shell.tv-mode .asset-total strong { font-size: 19px; }.game-shell.tv-mode .asset-mini-grid small { font-size: 7px; }.game-shell.tv-mode .asset-mini-grid b { font-size: 9px; }
@@ -646,7 +646,7 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
   .game-shell.tv-mode .camera-status { width: min(270px, 27%); padding: 14px 16px; }.game-shell.tv-mode .camera-mode, .game-shell.tv-mode .camera-status > small { font-size: 10px; }.game-shell.tv-mode .camera-status h2 { font-size: clamp(24px,2.2vw,37px); }.game-shell.tv-mode .camera-status p { font-size: 11px; }
   .game-shell.tv-mode .route-navigator { top: 12px; right: 12px; width: 330px; padding: 14px; }.game-shell.tv-mode .route-navigator > header span small { font-size: 8px; }.game-shell.tv-mode .route-navigator > header span b { font-size: 17px; }.game-shell.tv-mode .navigator-current-head p small { font-size: 9px; }.game-shell.tv-mode .navigator-current-head p b { font-size: 21px; }.game-shell.tv-mode .navigator-description { min-height: 0; font-size: 10px; }.game-shell.tv-mode .navigator-current-foot span, .game-shell.tv-mode .navigator-current-foot b { font-size: 8px; }
   .game-shell.tv-mode .navigator-players > header b { font-size: 12px; }.game-shell.tv-mode .navigator-players > header small { font-size: 9px; }.game-shell.tv-mode .navigator-players > article { min-height: 48px; }.game-shell.tv-mode .navigator-players article p b { font-size: 12px; }.game-shell.tv-mode .navigator-players article p small, .game-shell.tv-mode .navigator-players article > em { font-size: 8px; }.game-shell.tv-mode .route-navigator > footer span { font-size: 9px; }.game-shell.tv-mode .route-navigator > footer b { font-size: 11px; }.game-shell.tv-mode .route-navigator > footer small { font-size: 7px; }
-  .game-shell.tv-mode .scene-action-panel { left: 12px; top: 220px; bottom: auto; width: min(270px,27%); min-height: 0; padding: 9px; grid-template-columns: minmax(0,1fr) 78px; gap: 7px; border-radius: 15px; transform: none; }.game-shell.tv-mode .turn-phase-copy small { font-size: 7px; }.game-shell.tv-mode .turn-phase-copy b { font-size: 12px; }.game-shell.tv-mode .turn-phase-copy span { font-size: 8px; }.game-shell.tv-mode .voice-turn-state { font-size: 6px; }.game-shell.tv-mode .roulette-console { width: 116px; height: 116px; zoom: .64; }.game-shell.tv-mode .turn-actions { grid-column: 1 / -1; }.game-shell.tv-mode .start-turn-button { min-height: 40px; }.game-shell.tv-mode .start-turn-button span { font-size: 7px; }.game-shell.tv-mode .start-turn-button b { padding: 7px; font-size: 9px; }.game-shell.tv-mode .skip-turn-animation { min-height: 30px; font-size: 6px; }.game-shell.tv-mode .motion-mode-toggle { display: none; }.game-shell.tv-mode .turn-safety-note { display: none; }.game-shell.tv-mode .math-answer-panel { left: 0; top: calc(100% + 7px); bottom: auto; width: min(520px,70vw); transform: none; }
+  .game-shell.tv-mode .scene-action-panel { left: 12px; top: 220px; bottom: auto; width: min(270px,27%); min-height: 0; padding: 9px; grid-template-columns: minmax(0,1fr) 78px; gap: 7px; border-radius: 15px; transform: none; }.game-shell.tv-mode .turn-phase-copy small { font-size: 7px; }.game-shell.tv-mode .turn-phase-copy b { font-size: 12px; }.game-shell.tv-mode .turn-phase-copy span { font-size: 8px; }.game-shell.tv-mode .voice-turn-state { font-size: 6px; }.game-shell.tv-mode .roulette-console { width: 116px; height: 116px; zoom: .64; }.game-shell.tv-mode .turn-actions { grid-column: 1 / -1; }.game-shell.tv-mode .start-turn-button { min-height: 40px; }.game-shell.tv-mode .start-turn-button span { font-size: 7px; }.game-shell.tv-mode .start-turn-button b { padding: 7px; font-size: 9px; }.game-shell.tv-mode .skip-turn-animation { min-height: 30px; font-size: 6px; }.game-shell.tv-mode .motion-mode-toggle { display: none; }.game-shell.tv-mode .turn-safety-note { display: none; }.game-shell.tv-mode .math-answer-panel { position: static; grid-column: 1 / -1; width: 100%; padding: 7px 8px; box-shadow: none; transform: none; }.game-shell.tv-mode .math-answer-panel p { margin: 0; display: block; }.game-shell.tv-mode .math-answer-panel p b, .game-shell.tv-mode .math-answer-panel p small { display: block; }.game-shell.tv-mode .math-answer-panel p small { margin-top: 3px; }.game-shell.tv-mode .math-answer-panel .retry-listen-button, .game-shell.tv-mode .math-answer-panel > div { display: none; }
   .game-shell.tv-mode .journey-log { padding: 15px 12px; border-radius: 20px; }.game-shell.tv-mode .log-heading b { font-size: 15px; }.game-shell.tv-mode .log-heading small { font-size: 9px; }.game-shell.tv-mode .log-list article b { font-size: 11px; }.game-shell.tv-mode .log-list article small { font-size: 8px; }.game-shell.tv-mode .game-rule-note { display: none; }
   .game-shell.tv-mode .economy-dialog { width: min(1240px,94vw); }.game-shell.tv-mode .economy-dialog-header small, .game-shell.tv-mode .economy-stat-row small, .game-shell.tv-mode .rent-growth-board small { font-size: 10px; }.game-shell.tv-mode .economy-dialog-header h3 { font-size: 26px; }.game-shell.tv-mode .economy-actions button { min-height: 60px; }.game-shell.tv-mode .economy-actions button span { font-size: 10px; }.game-shell.tv-mode .economy-actions button b { font-size: 14px; }
   .game-shell.tv-mode .rules-dialog > header h2 { font-size:31px; }.game-shell.tv-mode .rules-dialog > header p { font-size:12px; }.game-shell.tv-mode .rules-tabs button { min-height:50px;font-size:14px; }.game-shell.tv-mode .rules-flow h3,.game-shell.tv-mode .rules-card-grid h3,.game-shell.tv-mode .accessibility-promises h3 { font-size:17px; }.game-shell.tv-mode .rules-flow article b,.game-shell.tv-mode .rules-card-grid article > b,.game-shell.tv-mode .rules-special-grid b { font-size:12px; }.game-shell.tv-mode .rules-flow article small,.game-shell.tv-mode .rules-card-grid p,.game-shell.tv-mode .rules-special-grid small { font-size:10px; }.game-shell.tv-mode .city-rent-table { font-size:12px; }.game-shell.tv-mode .city-rent-table thead th { font-size:11px; }.game-shell.tv-mode .city-rent-table tbody th b { font-size:13px; }.game-shell.tv-mode .city-rent-table tbody th small { font-size:9px; }.game-shell.tv-mode .accessibility-setting-list p b { font-size:15px; }.game-shell.tv-mode .accessibility-setting-list p small,.game-shell.tv-mode .accessibility-promises article small { font-size:10px; }
@@ -689,13 +689,7 @@ html.tv-native-mirror .game-shell.tv-mode .control-deck {
   margin-right: max(7px, env(safe-area-inset-right));
 }
 html.tv-native-mirror .game-shell.tv-mode .game-topbar {
-  height: 32px;
-  min-height: 32px;
-  margin-top: 0;
-  margin-bottom: 0;
-  grid-template-columns: 1fr auto;
-  gap: 6px;
-  overflow: hidden;
+  display: none;
 }
 html.tv-native-mirror .game-shell.tv-mode .game-brand .brand-mark { width: 26px; height: 26px; border-radius: 8px; font-size: 15px; }
 html.tv-native-mirror .game-shell.tv-mode .game-brand strong,
@@ -715,7 +709,7 @@ html.tv-native-mirror .game-shell.tv-mode .game-icon-action,
 html.tv-native-mirror .game-shell.tv-mode .cast-button,
 html.tv-native-mirror .game-shell.tv-mode .settle-button { min-width: 29px; width: auto; height: 29px; padding: 0 6px; border-radius: 8px; font-size: 8px; }
 html.tv-native-mirror .game-shell.tv-mode .game-icon-action { width: 29px; padding: 0; font-size: 13px; }
-html.tv-native-mirror .game-shell.tv-mode .round-progress { height: 2px; }
+html.tv-native-mirror .game-shell.tv-mode .round-progress { display: none; }
 html.tv-native-mirror .game-shell.tv-mode .player-rail {
   height: 34px;
   min-height: 34px;
@@ -739,7 +733,7 @@ html.tv-native-mirror .game-shell.tv-mode .active-flag { padding: 2px 4px; font-
 html.tv-native-mirror .game-shell.tv-mode .child-badge,
 html.tv-native-mirror .game-shell.tv-mode .card-status-badges { display: none; }
 html.tv-native-mirror .game-shell.tv-mode .control-deck {
-  height: calc(100dvh - 72px - env(safe-area-inset-bottom));
+  height: calc(100dvh - 38px - env(safe-area-inset-bottom));
   min-height: 0;
   margin-top: 0;
   margin-bottom: env(safe-area-inset-bottom);
@@ -816,9 +810,12 @@ html.tv-native-mirror .game-shell.tv-mode .start-turn-button b { padding: 6px; f
 html.tv-native-mirror .game-shell.tv-mode .skip-turn-animation { min-height: 25px; padding: 0 3px; border-radius: 6px; font-size: 5px; }
 html.tv-native-mirror .game-shell.tv-mode .motion-mode-toggle { display: none; }
 html.tv-native-mirror .game-shell.tv-mode .turn-safety-note { display: none; }
-html.tv-native-mirror .game-shell.tv-mode .math-answer-panel { left: 0; top: calc(100% + 4px); bottom: auto; width: min(340px,78vw); padding: 6px; transform: none; }
-html.tv-native-mirror .game-shell.tv-mode .math-answer-panel > div { gap: 2px; }
-html.tv-native-mirror .game-shell.tv-mode .math-answer-panel button { height: 23px; font-size: 6px; }
+html.tv-native-mirror .game-shell.tv-mode .math-answer-panel { position: static; grid-column: 1 / -1; width: 100%; padding: 5px 6px; box-shadow: none; transform: none; }
+html.tv-native-mirror .game-shell.tv-mode .math-answer-panel p { margin: 0; display: block; }
+html.tv-native-mirror .game-shell.tv-mode .math-answer-panel p b { font-size: 7px; }
+html.tv-native-mirror .game-shell.tv-mode .math-answer-panel p small { margin-top: 2px; display: block; font-size: 5px; }
+html.tv-native-mirror .game-shell.tv-mode .math-answer-panel .retry-listen-button,
+html.tv-native-mirror .game-shell.tv-mode .math-answer-panel > div { display: none; }
 html.tv-native-mirror .game-shell.tv-mode .journey-log {
   padding: 8px 6px;
   display: flex;

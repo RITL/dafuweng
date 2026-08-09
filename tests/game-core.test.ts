@@ -19,6 +19,7 @@ import {
 } from "../app/game/session";
 import { calculateAssetBreakdown, createSettlementRanking } from "../app/game/settlement";
 import { shouldUseNativeMirrorLayout } from "../app/game/display";
+import { parseSpokenNumber } from "../app/game/voice";
 import type { FamilyCard, GameSession, PlayerState } from "../app/game/types";
 
 const colors = ["coral", "ocean", "sunny", "grape", "mint", "rose"] as const;
@@ -235,6 +236,20 @@ describe("iPhone 原生清晰电视布局", () => {
     assert.equal(shouldUseNativeMirrorLayout(932, 5), true);
     assert.equal(shouldUseNativeMirrorLayout(1366, 5), false);
     assert.equal(shouldUseNativeMirrorLayout(844, 0), false);
+  });
+});
+
+describe("小朋友数学语音答案", () => {
+  test("数字八的常见识别文本都能正确提交", () => {
+    for (const transcript of ["8", "八", "捌", "答案是八", "八，完毕", "吧完毕", "巴", "爸", "叭", "发"]) {
+      assert.equal(parseSpokenNumber(transcript), 8, transcript);
+    }
+  });
+
+  test("电视回声包含题目时优先取最后说出的答案", () => {
+    assert.equal(parseSpokenNumber("0 加 8，答案是 8"), 8);
+    assert.equal(parseSpokenNumber("零加八等于八"), 8);
+    assert.equal(parseSpokenNumber("十二加十二等于二十四"), 24);
   });
 });
 
