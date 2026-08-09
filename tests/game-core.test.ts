@@ -18,7 +18,7 @@ import {
   saveGameSession,
 } from "../app/game/session";
 import { calculateAssetBreakdown, createSettlementRanking } from "../app/game/settlement";
-import { createTelevisionViewportContent, shouldUseVirtualTelevisionViewport } from "../app/game/display";
+import { shouldUseNativeMirrorLayout } from "../app/game/display";
 import type { FamilyCard, GameSession, PlayerState } from "../app/game/types";
 
 const colors = ["coral", "ocean", "sunny", "grape", "mint", "rose"] as const;
@@ -229,19 +229,12 @@ describe("随时结算、同分与共同冠军", () => {
   });
 });
 
-describe("iPhone 电视虚拟画布", () => {
-  test("触屏窄视口启用电视画布，桌面浏览器保持原布局", () => {
-    assert.equal(shouldUseVirtualTelevisionViewport(844, 5), true);
-    assert.equal(shouldUseVirtualTelevisionViewport(1366, 5), false);
-    assert.equal(shouldUseVirtualTelevisionViewport(844, 0), false);
-  });
-
-  test("iPhone 横屏宽度会映射到固定 1366 桌面视口", () => {
-    const content = createTelevisionViewportContent(844);
-    assert.match(content, /width=1366/);
-    assert.match(content, /initial-scale=0\.6179/);
-    assert.match(content, /minimum-scale=0\.6179/);
-    assert.match(content, /user-scalable=no/);
+describe("iPhone 原生清晰电视布局", () => {
+  test("触屏窄视口启用紧凑布局，桌面浏览器保持标准电视布局", () => {
+    assert.equal(shouldUseNativeMirrorLayout(844, 5), true);
+    assert.equal(shouldUseNativeMirrorLayout(932, 5), true);
+    assert.equal(shouldUseNativeMirrorLayout(1366, 5), false);
+    assert.equal(shouldUseNativeMirrorLayout(844, 0), false);
   });
 });
 
