@@ -652,6 +652,64 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
   .game-shell.tv-mode .rules-dialog > header h2 { font-size:31px; }.game-shell.tv-mode .rules-dialog > header p { font-size:12px; }.game-shell.tv-mode .rules-tabs button { min-height:50px;font-size:14px; }.game-shell.tv-mode .rules-flow h3,.game-shell.tv-mode .rules-card-grid h3,.game-shell.tv-mode .accessibility-promises h3 { font-size:17px; }.game-shell.tv-mode .rules-flow article b,.game-shell.tv-mode .rules-card-grid article > b,.game-shell.tv-mode .rules-special-grid b { font-size:12px; }.game-shell.tv-mode .rules-flow article small,.game-shell.tv-mode .rules-card-grid p,.game-shell.tv-mode .rules-special-grid small { font-size:10px; }.game-shell.tv-mode .city-rent-table { font-size:12px; }.game-shell.tv-mode .city-rent-table thead th { font-size:11px; }.game-shell.tv-mode .city-rent-table tbody th b { font-size:13px; }.game-shell.tv-mode .city-rent-table tbody th small { font-size:9px; }.game-shell.tv-mode .accessibility-setting-list p b { font-size:15px; }.game-shell.tv-mode .accessibility-setting-list p small,.game-shell.tv-mode .accessibility-promises article small { font-size:10px; }
 }
 
+/* Computer → TV · readable from the sofa without sacrificing the map */
+@media (min-width: 1280px) and (min-height: 700px) and (orientation: landscape) {
+  .game-shell.tv-mode .player-rail { height: 58px; min-height: 58px; grid-template-columns: repeat(auto-fit,minmax(170px,230px)); gap: 7px; }
+  .game-shell.tv-mode .rail-player { min-height: 58px; padding: 6px 9px; border-radius: 14px; }
+  .game-shell.tv-mode .rail-avatar { width: 40px; height: 40px; flex-basis: 40px; border-radius: 12px; font-size: 25px; }
+  .game-shell.tv-mode .rail-name b { font-size: 14px; }
+  .game-shell.tv-mode .rail-name small { font-size: 10px; }
+  .game-shell.tv-mode .rail-money b { font-size: 13px; }
+  .game-shell.tv-mode .active-flag { padding: 4px 8px; font-size: 8px; }
+  .game-shell.tv-mode .control-deck { height: calc(100dvh - 66px); grid-template-columns: 170px minmax(0,1fr) 175px; gap: 9px; }
+  .game-shell.tv-mode .current-player-card { padding: 14px 10px; }
+  .game-shell.tv-mode .current-avatar { width: 72px; height: 72px; margin: 8px auto 6px; }
+  .game-shell.tv-mode .current-avatar > span { font-size: 44px; }
+  .game-shell.tv-mode .current-player-card h1 { font-size: 24px; }
+  .game-shell.tv-mode .asset-total { padding: 11px 6px; }
+  .game-shell.tv-mode .asset-total small { font-size: 11px; }
+  .game-shell.tv-mode .asset-total strong { font-size: 27px; }
+  .game-shell.tv-mode .asset-mini-grid small { font-size: 9px; }
+  .game-shell.tv-mode .asset-mini-grid b { font-size: 12px; }
+  .game-shell.tv-mode .tv-exit-button { min-height: 38px; font-size: 10px; }
+  .game-shell.tv-mode .camera-status { width: min(300px,25%); }
+  .game-shell.tv-mode .camera-mode, .game-shell.tv-mode .camera-status > small { font-size: 12px; }
+  .game-shell.tv-mode .camera-status h2 { font-size: 34px; }
+  .game-shell.tv-mode .camera-status p { font-size: 14px; }
+  .game-shell.tv-mode .route-navigator { width: 300px; }
+  .game-shell.tv-mode .route-navigator > header span b { font-size: 19px; }
+  .game-shell.tv-mode .navigator-current-head p small { font-size: 11px; }
+  .game-shell.tv-mode .navigator-current-head p b { font-size: 23px; }
+  .game-shell.tv-mode .navigator-players > header b { font-size: 14px; }
+  .game-shell.tv-mode .navigator-players > article { min-height: 54px; }
+  .game-shell.tv-mode .navigator-players article p b { font-size: 14px; }
+  .game-shell.tv-mode .navigator-players article p small, .game-shell.tv-mode .navigator-players article > em { font-size: 10px; }
+  .game-shell.tv-mode .scene-action-panel { top: 245px; width: min(310px,27%); padding: 12px; grid-template-columns: minmax(0,1fr) 102px; gap: 9px; }
+  .game-shell.tv-mode .turn-phase-copy small { font-size: 11px; }
+  .game-shell.tv-mode .turn-phase-copy b { font-size: 17px; }
+  .game-shell.tv-mode .turn-phase-copy span { font-size: 12px; }
+  .game-shell.tv-mode .voice-turn-state { font-size: 10px; }
+  .game-shell.tv-mode .roulette-console { zoom: .82; }
+  .game-shell.tv-mode .number-roulette.physical-ring span { font-size: 10px; }
+  .game-shell.tv-mode .roulette-equation { min-width: 96px; font-size: 13px; }
+  .game-shell.tv-mode .start-turn-button { min-height: 52px; }
+  .game-shell.tv-mode .start-turn-button span { font-size: 11px; }
+  .game-shell.tv-mode .start-turn-button b { font-size: 14px; }
+  .game-shell.tv-mode .math-answer-panel p b { font-size: 12px; }
+  .game-shell.tv-mode .math-answer-panel p small { font-size: 10px; }
+  .game-shell.tv-mode .journey-log { padding: 16px 12px; }
+  .game-shell.tv-mode .log-heading b { font-size: 19px; }
+  .game-shell.tv-mode .log-heading small { font-size: 11px; }
+  .game-shell.tv-mode .log-list article { padding: 12px 2px; gap: 8px; }
+  .game-shell.tv-mode .log-list article > i { width: 30px; height: 30px; flex-basis: 30px; font-size: 17px; }
+  .game-shell.tv-mode .log-list article b { font-size: 13px; }
+  .game-shell.tv-mode .log-list article small { font-size: 10px; }
+  .game-shell.tv-mode .depth-0 .travel-index { font-size: 10px; }
+  .game-shell.tv-mode .depth-0 .travel-copy small { font-size: 10px; }
+  .game-shell.tv-mode .depth-0 .travel-copy b { font-size: 27px; }
+  .game-shell.tv-mode .depth-0 .travel-copy em { font-size: 12px; }
+}
+
 @media (max-width: 760px) {
   .game-shell { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
   .game-topbar, .player-rail, .control-deck { width: calc(100% - max(20px, env(safe-area-inset-left) + env(safe-area-inset-right) + 12px)); }
