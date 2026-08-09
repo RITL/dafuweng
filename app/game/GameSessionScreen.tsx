@@ -21,6 +21,7 @@ import type { AssetAction } from "./economy";
 import { advanceGameTurn, moveActivePlayer, rollRoulette } from "./session";
 import type { RouletteResult } from "./session";
 import { calculateAssetBreakdown, createSettlementRanking } from "./settlement";
+import { createTelevisionViewportContent, shouldUseVirtualTelevisionViewport } from "./display";
 import type { UiSound } from "./use-game-audio";
 import type { BoardTile, CityTile, GameSession, OwnedProperty, PlayerState } from "./types";
 
@@ -1470,6 +1471,14 @@ export function GameSessionScreen({
   };
 
   const toggleFullscreen = async () => {
+    const useVirtualCanvas = shouldUseVirtualTelevisionViewport(window.innerWidth, navigator.maxTouchPoints);
+    if (useVirtualCanvas) {
+      const enabled = !tvMode;
+      setTvMode(enabled);
+      setDisplayStatus(enabled ? "iPhone 已切换为电视桌面画布 · 请保持横屏" : "已退出电视桌面画布");
+      playUiSound("tap");
+      return;
+    }
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen();
@@ -1533,10 +1542,11 @@ export function GameSessionScreen({
 
   const enterTelevisionMode = async () => {
     setTvMode(true);
-    setDisplayStatus("电视模式已开启 · 保持设备横屏");
+    const useVirtualCanvas = shouldUseVirtualTelevisionViewport(window.innerWidth, navigator.maxTouchPoints);
+    setDisplayStatus(useVirtualCanvas ? "iPhone 电视桌面画布已开启 · 请保持横屏" : "电视模式已开启 · 保持设备横屏");
     setCastGuideOpen(false);
     playUiSound("success");
-    if (!document.fullscreenElement) {
+    if (!useVirtualCanvas && !document.fullscreenElement) {
       try {
         await document.documentElement.requestFullscreen();
       } catch {
@@ -1554,6 +1564,27 @@ export function GameSessionScreen({
     setDisplayStatus("请让投屏设备和电视连接同一个 Wi-Fi");
     setCastGuideOpen(true);
   };
+
+  useEffect(() => {
+    if (!tvMode || !shouldUseVirtualTelevisionViewport(window.innerWidth, navigator.maxTouchPoints)) return;
+    const viewport = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+    if (!viewport) return;
+    const originalContent = viewport.content;
+    const applyTelevisionCanvas = () => {
+      const physicalLandscapeWidth = Math.max(window.screen.width, window.screen.height);
+      viewport.content = createTelevisionViewportContent(physicalLandscapeWidth);
+      document.documentElement.classList.add("tv-virtual-viewport");
+      window.scrollTo(0, 0);
+    };
+    applyTelevisionCanvas();
+    window.addEventListener("orientationchange", applyTelevisionCanvas);
+    return () => {
+      window.removeEventListener("orientationchange", applyTelevisionCanvas);
+      document.documentElement.classList.remove("tv-virtual-viewport");
+      viewport.content = originalContent;
+      window.scrollTo(0, 0);
+    };
+  }, [tvMode]);
 
   useEffect(() => {
     const handleKeyboard = (event: KeyboardEvent) => {
@@ -1684,7 +1715,8 @@ export function GameSessionScreen({
         <div style={{ width: gameLength.rounds ? `${completedProgress}%` : "100%" }} />
       </section>
 
-      {tvMode && <div className="tv-mode-status" role="status"><span>📺 75 寸电视模式</span><b>{displayStatus}</b><button type="button" onClick={() => setTvMode(false)}>退出大字布局</button></div>}
+      {tvMode && <div className="tv-mode-status" role="status"><span>📺 75 寸单屏桌面</span><b>{displayStatus} · 主界面无需上下滑</b><button type="button" onClick={() => setTvMode(false)}>退出电视布局</button></div>}
+      {tvMode && <div className="tv-rotate-prompt" role="status"><span>↻</span><b>请把 iPhone 横过来</b><small>横屏后会自动切换为适合电视的桌面棋盘，不再使用手机纵向布局。</small></div>}
 
       <section className="player-rail" aria-label="玩家资产概览">
         {session.players.map((player, index) => {
@@ -1846,14 +1878,14 @@ export function GameSessionScreen({
             <header><span>📺</span><div><small>IPHONE → ANDROID TV · 75 INCH</small><h2 id="cast-guide-title">把环球棋盘搬到客厅电视</h2><p>游戏留在手边设备上运行，电视只负责显示。iPhone 使用 AirPlay 屏幕镜像；没有 AirPlay 的安卓电视，可先安装 AirPlay 接收端。</p></div><button type="button" onClick={closeCastGuide} aria-label="关闭投屏说明">×</button></header>
             <div className="cast-device-tabs" role="tablist" aria-label="选择投屏设备"><button className={castGuideDevice === "iphone" ? "active" : ""} type="button" role="tab" aria-selected={castGuideDevice === "iphone"} onClick={() => setCastGuideDevice("iphone")}>iPhone</button><button className={castGuideDevice === "android" ? "active" : ""} type="button" role="tab" aria-selected={castGuideDevice === "android"} onClick={() => setCastGuideDevice("android")}>安卓设备</button><button className={castGuideDevice === "computer" ? "active" : ""} type="button" role="tab" aria-selected={castGuideDevice === "computer"} onClick={() => setCastGuideDevice("computer")}>电脑</button></div>
             {castGuideDevice === "iphone" ? (
-              <div className="cast-steps"><article><i>1</i><span><b>先确认电视能接收 AirPlay</b><small>电视设置里若有 Apple AirPlay 请开启；没有时，可在安卓电视应用商店安装 AirScreen 等接收端并打开。</small></span></article><article><i>2</i><span><b>打开 iPhone“屏幕镜像”</b><small>手机和电视连接同一 Wi-Fi，从右上角下拉控制中心，点两个重叠矩形的“屏幕镜像”。</small></span></article><article><i>3</i><span><b>选中客厅电视并横屏</b><small>关闭竖排方向锁定，把 iPhone 横过来；连接后再点下方按钮进入 75 寸大字布局。</small></span></article></div>
+              <div className="cast-steps"><article><i>1</i><span><b>先确认电视能接收 AirPlay</b><small>电视设置里若有 Apple AirPlay 请开启；没有时，可在安卓电视应用商店安装 AirScreen 等接收端并打开。</small></span></article><article><i>2</i><span><b>打开 iPhone“屏幕镜像”</b><small>手机和电视连接同一 Wi-Fi，从右上角下拉控制中心，点两个重叠矩形的“屏幕镜像”。</small></span></article><article><i>3</i><span><b>开启电视单屏桌面并横屏</b><small>连接后点下方按钮，游戏会锁定 1366 宽三栏棋盘，让玩家、棋盘和位置日志同时显示，不再上下滑。</small></span></article></div>
             ) : castGuideDevice === "android" ? (
               <div className="cast-steps"><article><i>1</i><span><b>连接同一个 Wi-Fi</b><small>手机和平板与安卓电视必须在同一家庭网络。</small></span></article><article><i>2</i><span><b>打开系统“投屏 / 无线投屏”</b><small>从安卓快捷设置下拉面板进入；不同品牌也可能叫屏幕共享、Cast 或多屏互动。</small></span></article><article><i>3</i><span><b>选择客厅电视并保持横屏</b><small>连上后回到本页面，点击下方按钮进入电视大字与全屏布局。</small></span></article></div>
             ) : (
               <div className="cast-steps"><article><i>1</i><span><b>电脑与安卓电视连接同一 Wi-Fi</b><small>电视端打开无线显示、Chromecast 或投屏接收功能。</small></span></article><article><i>2</i><span><b>Chrome 右上角 ⋮ → 投放、保存和分享 → 投放</b><small>来源选择“投放标签页”；若要让电视直接出声，也可选择投放屏幕。</small></span></article><article><i>3</i><span><b>选择客厅电视</b><small>连接成功后，让游戏页面保持前台，再进入电视模式。</small></span></article></div>
             )}
             <div className="cast-checklist"><span>✓ 同一 Wi-Fi</span><span>✓ 电视开启接收</span><span>✓ iPhone 不锁屏</span><span>✓ 关闭竖屏锁定</span></div>
-            <div className="cast-guide-actions"><button type="button" onClick={closeCastGuide}>稍后再投</button><button type="button" onClick={enterTelevisionMode}><small>连接电视后点击</small><b>进入 75 寸电视模式 →</b></button></div>
+            <div className="cast-guide-actions"><button type="button" onClick={closeCastGuide}>稍后再投</button><button type="button" onClick={enterTelevisionMode}><small>连接电视后点击</small><b>切换为电视单屏桌面 →</b></button></div>
             <footer>提示：语音识别继续使用 iPhone 或控制设备的麦克风。请放在大家附近；电视音量太大会干扰识别时，可适当调低电视声音。</footer>
           </section>
         </div>

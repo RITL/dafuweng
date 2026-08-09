@@ -662,3 +662,88 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
 }
 
 .cast-device-tabs { grid-template-columns: repeat(3, 1fr); }
+
+html.tv-virtual-viewport,
+html.tv-virtual-viewport body {
+  width: 1366px;
+  min-width: 1366px;
+  min-height: 100%;
+  overflow: hidden;
+  background: #dff5f1;
+}
+html.tv-virtual-viewport .game-shell.tv-mode {
+  width: 1366px;
+  min-width: 1366px;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+html.tv-virtual-viewport .game-shell.tv-mode .game-topbar {
+  width: calc(100% - 24px);
+  height: 62px;
+  min-height: 62px;
+  overflow: hidden;
+}
+html.tv-virtual-viewport .game-shell.tv-mode .game-toolbar {
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+html.tv-virtual-viewport .game-shell.tv-mode .player-rail {
+  width: calc(100% - 24px);
+  height: 69px;
+  min-height: 69px;
+  margin: 6px auto;
+  overflow: hidden;
+}
+html.tv-virtual-viewport .game-shell.tv-mode .control-deck {
+  width: calc(100% - 24px);
+  height: calc(100dvh - 143px);
+  min-height: 0;
+  grid-template-columns: 220px minmax(0, 1fr) 230px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 10px;
+  overflow: hidden;
+}
+html.tv-virtual-viewport .game-shell.tv-mode .current-player-card,
+html.tv-virtual-viewport .game-shell.tv-mode .board-stage,
+html.tv-virtual-viewport .game-shell.tv-mode .journey-log,
+html.tv-virtual-viewport .game-shell.tv-mode .game-camera-shell,
+html.tv-virtual-viewport .game-shell.tv-mode .travel-scene {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+html.tv-virtual-viewport .game-shell.tv-mode .journey-log {
+  display: flex;
+  flex-direction: column;
+}
+html.tv-virtual-viewport .game-shell.tv-mode .log-list {
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+}
+html.tv-virtual-viewport .game-shell.tv-mode .economy-dialog,
+html.tv-virtual-viewport .game-shell.tv-mode .asset-manager,
+html.tv-virtual-viewport .game-shell.tv-mode .rules-dialog,
+html.tv-virtual-viewport .game-shell.tv-mode .cast-guide-dialog {
+  max-height: 92dvh;
+  overflow-y: auto;
+}
+.tv-rotate-prompt { display: none; }
+@media (orientation: portrait) {
+  html.tv-virtual-viewport .tv-rotate-prompt {
+    position: fixed;
+    z-index: 200;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    gap: 14px;
+    padding: 80px;
+    color: #fff;
+    text-align: center;
+    background: radial-gradient(circle at 50% 32%, #299d94, #0b5059 68%);
+  }
+  html.tv-virtual-viewport .tv-rotate-prompt span { font-size: 110px; line-height: 1; animation: gentleSpin 2.4s ease-in-out infinite; }
+  html.tv-virtual-viewport .tv-rotate-prompt b { font-size: 48px; }
+  html.tv-virtual-viewport .tv-rotate-prompt small { font-size: 23px; line-height: 1.65; }
+}

@@ -18,6 +18,7 @@ import {
   saveGameSession,
 } from "../app/game/session";
 import { calculateAssetBreakdown, createSettlementRanking } from "../app/game/settlement";
+import { createTelevisionViewportContent, shouldUseVirtualTelevisionViewport } from "../app/game/display";
 import type { FamilyCard, GameSession, PlayerState } from "../app/game/types";
 
 const colors = ["coral", "ocean", "sunny", "grape", "mint", "rose"] as const;
@@ -225,6 +226,22 @@ describe("随时结算、同分与共同冠军", () => {
     assert.deepEqual(ranking.map((entry) => entry.rank), [1, 1, 3, 4]);
     assert.equal(ranking.filter((entry) => entry.isWinner).length, 2);
     assert.deepEqual(ranking.filter((entry) => entry.isWinner).map((entry) => entry.player.id), ["p1", "p2"]);
+  });
+});
+
+describe("iPhone 电视虚拟画布", () => {
+  test("触屏窄视口启用电视画布，桌面浏览器保持原布局", () => {
+    assert.equal(shouldUseVirtualTelevisionViewport(844, 5), true);
+    assert.equal(shouldUseVirtualTelevisionViewport(1366, 5), false);
+    assert.equal(shouldUseVirtualTelevisionViewport(844, 0), false);
+  });
+
+  test("iPhone 横屏宽度会映射到固定 1366 桌面视口", () => {
+    const content = createTelevisionViewportContent(844);
+    assert.match(content, /width=1366/);
+    assert.match(content, /initial-scale=0\.6179/);
+    assert.match(content, /minimum-scale=0\.6179/);
+    assert.match(content, /user-scalable=no/);
   });
 });
 
