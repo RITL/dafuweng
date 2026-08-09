@@ -1709,7 +1709,6 @@ export function GameSessionScreen({
         <div style={{ width: gameLength.rounds ? `${completedProgress}%` : "100%" }} />
       </section>
 
-      {tvMode && <div className="tv-mode-status" role="status"><span>📺 75 寸清晰单屏</span><b>{displayStatus} · 已避开灵动岛安全区</b><button type="button" onClick={() => setTvMode(false)}>退出电视布局</button></div>}
       {tvMode && <div className="tv-rotate-prompt" role="status"><span>↻</span><b>请把 iPhone 横过来</b><small>横屏后会使用原生清晰画面，并自动避开灵动岛和屏幕圆角。</small></div>}
 
       <section className="player-rail" aria-label="玩家资产概览">
@@ -1760,6 +1759,7 @@ export function GameSessionScreen({
           </div>
           <button className="manage-assets-button" type="button" onClick={openAssetManager}>🏦 查看 / 管理我的资产</button>
           <div className={`voice-ready state-${voiceVisualState}`}><i>{voiceVisualState === "speaking" ? "📣" : session.voiceEnabled ? "🎙️" : "🔕"}</i><span><b>{voiceVisualState === "speaking" ? "主持人正在播报" : voiceVisualState === "listening" ? "麦克风正在倾听" : voiceVisualState === "heard" ? "已经收到你的回答" : currentPlayer.isChild ? "小小数学家模式" : session.voiceEnabled ? "语音主持已准备" : "语音主持已关闭"}</b><small>{recognizedTranscript ? `最近听到：“${recognizedTranscript}”` : session.voiceEnabled ? voiceStatus : "仍可使用大按钮操作"}</small></span><div className="voice-wave" aria-hidden="true"><em /><em /><em /><em /><em /></div><button type="button" onClick={() => { stopVoiceListening(); window.speechSynthesis?.cancel(); setVoiceGuideOpen(true); setVoiceStatus("可以检查或重新申请麦克风权限"); setVoiceVisualState("requesting"); }} aria-label="打开麦克风设置">设置</button></div>
+          {tvMode && <button className="tv-exit-button" type="button" onClick={() => setTvMode(false)}>退出电视布局</button>}
         </aside>
 
         <section className="board-stage" aria-live="polite">
