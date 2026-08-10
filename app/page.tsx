@@ -9,7 +9,7 @@ import {
   PLAYER_COLORS,
 } from "./game/config";
 import { GameSessionScreen } from "./game/GameSessionScreen";
-import { RemoteControllerScreen, TelevisionRemoteHost } from "./game/RemotePlay";
+import { RemoteControllerScreen, TelevisionRemoteHost, useTelevisionRemoteNavigation } from "./game/RemotePlay";
 import {
   clearGameSession,
   createGameSession,
@@ -50,6 +50,7 @@ export default function Home() {
   const [televisionMode, setTelevisionMode] = useState(false);
   const [remotePairingOpen, setRemotePairingOpen] = useState(false);
   const { musicEnabled, effectsEnabled, audioStarted, setMusicEnabled, setEffectsEnabled, playUiSound } = useGameAudio();
+  useTelevisionRemoteNavigation();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -80,6 +81,14 @@ export default function Home() {
     setTelevisionMode(true);
     setRemotePairingOpen(true);
     playUiSound("success");
+  };
+
+  const exitTelevisionBrowserMode = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("tv");
+    window.history.replaceState({}, "", url);
+    setRemotePairingOpen(false);
+    setTelevisionMode(false);
   };
 
   const selectedEconomy = useMemo(
@@ -157,7 +166,7 @@ export default function Home() {
 
   if (session) {
     return (
-      <>
+      <div className="home-stage">
         <GameSessionScreen
           session={session}
           isFresh={freshSession}
@@ -176,8 +185,8 @@ export default function Home() {
           onSessionChange={updateSession}
           onEndGame={endGame}
         />
-        <TelevisionRemoteHost enabled={televisionMode} pairingOpen={remotePairingOpen} onClosePairing={() => setRemotePairingOpen(false)} />
-      </>
+        <TelevisionRemoteHost enabled={televisionMode} pairingOpen={remotePairingOpen} onClosePairing={() => setRemotePairingOpen(false)} onExitTelevisionMode={exitTelevisionBrowserMode} />
+      </div>
     );
   }
 
@@ -506,7 +515,7 @@ export default function Home() {
         </div>
       )}
     </main>
-    <TelevisionRemoteHost enabled={televisionMode} pairingOpen={remotePairingOpen} onClosePairing={() => setRemotePairingOpen(false)} />
+    <TelevisionRemoteHost enabled={televisionMode} pairingOpen={remotePairingOpen} onClosePairing={() => setRemotePairingOpen(false)} onExitTelevisionMode={exitTelevisionBrowserMode} />
     </>
   );
 }

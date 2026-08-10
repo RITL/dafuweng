@@ -12,6 +12,7 @@ type RemoteCommand =
   | { type: "activate" }
   | { type: "primary" }
   | { type: "back" }
+  | { type: "disconnect" }
   | { type: "answer"; value: number }
   | { type: "intent"; value: string }
   | { type: "voice"; transcript: string };
@@ -24,10 +25,13 @@ interface RemoteUiState {
   actions: string[];
 }
 
+type RemoteHostMessage = RemoteUiState | { type: "disconnected" };
+
 interface TelevisionRemoteHostProps {
   enabled: boolean;
   pairingOpen: boolean;
   onClosePairing: () => void;
+  onExitTelevisionMode: () => void;
 }
 
 interface SpeechRecognitionResultLike extends ArrayLike<{ transcript: string }> {
@@ -145,6 +149,44 @@ function moveFocus(direction: Direction) {
   best?.element.focus({ preventScroll: false });
 }
 
+export function useTelevisionRemoteNavigation() {
+  useEffect(() => {
+    const handleRemoteKey = (event: KeyboardEvent) => {
+      const target = event.target;
+      const isEditing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement;
+      const directions: Partial<Record<string, Direction>> = {
+        ArrowUp: "up",
+        ArrowDown: "down",
+        ArrowLeft: "left",
+        ArrowRight: "right",
+      };
+      const legacyDirections: Partial<Record<number, Direction>> = {
+        37: "left",
+        38: "up",
+        39: "right",
+        40: "down",
+      };
+      const direction = directions[event.key] ?? legacyDirections[event.keyCode];
+      if (direction && !isEditing) {
+        event.preventDefault();
+        moveFocus(direction);
+        return;
+      }
+      if ((event.key === "Enter" || event.key === "Select" || event.keyCode === 13) && document.activeElement === document.body) {
+        event.preventDefault();
+        getFocusableElements()[0]?.focus({ preventScroll: false });
+        return;
+      }
+      if (event.key === "GoBack" || event.key === "Back" || event.key === "BrowserBack" || event.keyCode === 461 || event.keyCode === 10009) {
+        event.preventDefault();
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      }
+    };
+    window.addEventListener("keydown", handleRemoteKey);
+    return () => window.removeEventListener("keydown", handleRemoteKey);
+  }, []);
+}
+
 function runIntent(value: string) {
   const intentPatterns: Record<string, RegExp> = {
     purchase: /购买|买下|确认购买/,
@@ -214,10 +256,10 @@ function collectUiState(): RemoteUiState {
 
 function isRemoteCommand(value: unknown): value is RemoteCommand {
   if (!value || typeof value !== "object" || !("type" in value)) return false;
-  return ["navigate", "activate", "primary", "back", "answer", "intent", "voice"].includes(String(value.type));
+  return ["navigate", "activate", "primary", "back", "disconnect", "answer", "intent", "voice"].includes(String(value.type));
 }
 
-export function TelevisionRemoteHost({ enabled, pairingOpen, onClosePairing }: TelevisionRemoteHostProps) {
+export function TelevisionRemoteHost({ enabled, pairingOpen, onClosePairing, onExitTelevisionMode }: TelevisionRemoteHostProps) {
   const [roomCode, setRoomCode] = useState(() => {
     if (typeof window === "undefined") return "";
     const stored = window.sessionStorage.getItem(ROOM_STORAGE_KEY);
@@ -256,6 +298,12 @@ export function TelevisionRemoteHost({ enabled, pairingOpen, onClosePairing }: T
       });
       connection.on("data", (data) => {
         if (!isRemoteCommand(data)) return;
+        if (data.type === "disconnect") {
+          connection.close();
+          if (connectionRef.current === connection) connectionRef.current = null;
+          setStatus("ready");
+          return;
+        }
         handleRemoteCommand(data);
         window.setTimeout(() => connection.open && connection.send(collectUiState()), 120);
       });
@@ -303,19 +351,30 @@ export function TelevisionRemoteHost({ enabled, pairingOpen, onClosePairing }: T
     return url.toString();
   }, [roomCode]);
 
+  const disconnectController = () => {
+    const connection = connectionRef.current;
+    if (!connection) return;
+    if (connection.open) connection.send({ type: "disconnected" } satisfies RemoteHostMessage);
+    window.setTimeout(() => {
+      connection.close();
+      if (connectionRef.current === connection) connectionRef.current = null;
+      setStatus("ready");
+    }, 120);
+  };
+
   if (!enabled || !roomCode) return null;
-  const showPairing = pairingOpen || status !== "connected";
+  const showPairing = pairingOpen;
   return (
     <>
       {showPairing && (
         <div className="remote-pairing-backdrop" data-remote-ui role="presentation">
           <section className="remote-pairing-dialog" role="dialog" aria-modal="true" aria-labelledby="remote-pairing-title">
-            <header><span>📺</span><div><small>电视独立显示 · iPhone 遥控</small><h2 id="remote-pairing-title">用 iPhone 扫码连接</h2><p>不是投屏。电视保持 16:9 画面，操作和麦克风都留在 iPhone。</p></div></header>
+            <header><span>📺</span><div><small>电视独立显示 · iPhone 遥控</small><h2 id="remote-pairing-title">用 iPhone 扫码连接</h2><p>不是投屏。电视保持 16:9 画面，操作和麦克风都留在 iPhone。</p></div><button type="button" onClick={onClosePairing} aria-label="关闭连接窗口">×</button></header>
             <div className="remote-pairing-main">
               <div className="remote-qr">{controllerUrl && <QRCodeSVG value={controllerUrl} size={248} level="M" marginSize={2} />}</div>
               <div className="remote-pairing-copy"><span className={`remote-link-state state-${status}`}><i />{status === "connected" ? `${controllerName} 已连接` : status === "ready" ? "等待 iPhone 连接" : status === "error" ? "连接服务暂时不可用" : "正在建立房间"}</span><small>房间码用于确认 iPhone 连到的是这台电视</small><b>{roomCode.slice(0, 4)}&nbsp;{roomCode.slice(4)}</b><ol><li>iPhone 打开“相机”扫描二维码</li><li>Safari 遥控页面会自动连接电视</li><li>之后用手机按钮或语音操作整局</li></ol></div>
             </div>
-            <footer><span>手机和电视建议连接同一个 Wi-Fi</span>{status === "connected" && <button type="button" onClick={onClosePairing}>开始使用手机遥控 →</button>}</footer>
+            <footer><span>手机和电视建议连接同一个 Wi-Fi</span><div><button type="button" onClick={status === "connected" ? onClosePairing : onExitTelevisionMode}>{status === "connected" ? "返回游戏" : "退出电视模式"}</button>{status === "connected" && <button className="remote-disconnect-button" type="button" onClick={disconnectController}>断开手机</button>}</div></footer>
           </section>
         </div>
       )}
@@ -327,7 +386,7 @@ export function TelevisionRemoteHost({ enabled, pairingOpen, onClosePairing }: T
 interface RemoteControllerScreenProps { roomCode: string; }
 
 export function RemoteControllerScreen({ roomCode }: RemoteControllerScreenProps) {
-  const [status, setStatus] = useState<"connecting" | "connected" | "reconnecting" | "error">("connecting");
+  const [status, setStatus] = useState<"connecting" | "connected" | "reconnecting" | "disconnected" | "error">("connecting");
   const [uiState, setUiState] = useState<RemoteUiState>({ type: "state", activePlayer: "", title: "等待电视画面", detail: "", actions: [] });
   const [voiceStatus, setVoiceStatus] = useState("点麦克风后说：继续、购买、升级或数字答案");
   const [autoVoice, setAutoVoice] = useState(() => typeof window !== "undefined" && window.localStorage.getItem(AUTO_VOICE_STORAGE_KEY) === "on");
@@ -336,6 +395,7 @@ export function RemoteControllerScreen({ roomCode }: RemoteControllerScreenProps
   const autoVoiceRef = useRef(autoVoice);
   const voiceRestartTimerRef = useRef<number | null>(null);
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
+  const manuallyDisconnectedRef = useRef(false);
 
   const clearVoiceRestart = () => {
     if (voiceRestartTimerRef.current !== null) window.clearTimeout(voiceRestartTimerRef.current);
@@ -353,10 +413,20 @@ export function RemoteControllerScreen({ roomCode }: RemoteControllerScreenProps
       connectionRef.current = connection;
       connection.on("open", () => !disposed && setStatus("connected"));
       connection.on("data", (data) => {
-        if (data && typeof data === "object" && "type" in data && data.type === "state") setUiState(data as RemoteUiState);
+        if (!data || typeof data !== "object" || !("type" in data)) return;
+        if (data.type === "state") setUiState(data as RemoteUiState);
+        if (data.type === "disconnected") {
+          manuallyDisconnectedRef.current = true;
+          setStatus("disconnected");
+          connection.close();
+        }
       });
       connection.on("close", () => {
         if (disposed) return;
+        if (manuallyDisconnectedRef.current) {
+          setStatus("disconnected");
+          return;
+        }
         setStatus("reconnecting");
         reconnectTimer = window.setTimeout(connect, 1200);
       });
@@ -392,6 +462,25 @@ export function RemoteControllerScreen({ roomCode }: RemoteControllerScreenProps
       return;
     }
     connectionRef.current.send(command);
+  };
+
+  const disconnect = () => {
+    manuallyDisconnectedRef.current = true;
+    autoVoiceRef.current = false;
+    setAutoVoice(false);
+    clearVoiceRestart();
+    recognitionRef.current?.abort();
+    wakeLockRef.current?.release().catch(() => undefined);
+    wakeLockRef.current = null;
+    if (connectionRef.current?.open) connectionRef.current.send({ type: "disconnect" });
+    window.setTimeout(() => connectionRef.current?.close(), 120);
+    setStatus("disconnected");
+  };
+
+  const leaveController = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("controller");
+    window.location.assign(url.toString());
   };
 
   const requestWakeLock = async () => {
@@ -484,21 +573,22 @@ export function RemoteControllerScreen({ roomCode }: RemoteControllerScreenProps
 
   return (
     <main className="iphone-remote-shell" data-remote-ui>
-      <header className="iphone-remote-header"><span>🌍</span><div><small>环球大富翁 · iPhone 遥控器</small><b>{status === "connected" ? "已连接客厅电视" : status === "error" ? "暂时无法连接" : "正在连接电视…"}</b></div><i className={`state-${status}`} /></header>
+      <header className="iphone-remote-header"><span>🌍</span><div><small>环球大富翁 · iPhone 遥控器</small><b>{status === "connected" ? "已连接客厅电视" : status === "disconnected" ? "已断开电视" : status === "error" ? "暂时无法连接" : "正在连接电视…"}</b></div><i className={`state-${status}`} /></header>
+      {status === "disconnected" && <section className="iphone-disconnected"><span>👋</span><div><b>手机已与电视断开</b><small>电视端可以重新显示二维码，之后仍可再次连接。</small></div><button type="button" onClick={() => window.location.reload()}>重新连接</button><button type="button" onClick={leaveController}>返回游戏首页</button></section>}
       <section className="iphone-remote-now"><small>{uiState.activePlayer || "电视房间"}</small><h1>{uiState.title}</h1><p>{uiState.detail || `房间码 ${roomCode}`}</p></section>
       <button className="iphone-remote-primary" type="button" onClick={() => send({ type: "primary" })}><span>当前主要操作</span><b>开始 / 继续 / 确认</b></button>
       <section className="iphone-remote-intents" aria-label="常用游戏操作"><button type="button" onClick={() => send({ type: "intent", value: "purchase" })}>🏙️ 购买</button><button type="button" onClick={() => send({ type: "intent", value: "upgrade" })}>🏠 升级</button><button type="button" onClick={() => send({ type: "intent", value: "assets" })}>💰 资产</button><button type="button" onClick={() => send({ type: "intent", value: "giveup" })}>↪ 放弃</button></section>
       <section className="iphone-remote-navigation" aria-label="电视遥控方向键"><button className="up" type="button" onClick={() => send({ type: "navigate", direction: "up" })}>▲</button><button className="left" type="button" onClick={() => send({ type: "navigate", direction: "left" })}>◀</button><button className="ok" type="button" onClick={() => send({ type: "activate" })}>确定</button><button className="right" type="button" onClick={() => send({ type: "navigate", direction: "right" })}>▶</button><button className="down" type="button" onClick={() => send({ type: "navigate", direction: "down" })}>▼</button></section>
       <div className="iphone-remote-secondary"><button type="button" onClick={() => send({ type: "back" })}>← 返回</button><button className="iphone-voice-button" type="button" onClick={() => startVoice(autoVoiceRef.current)}>🎙️ {autoVoice ? "重新倾听" : "说话操作"}</button></div>
-      <label className={autoVoice ? "iphone-auto-voice active" : "iphone-auto-voice"}>
+      <label className={autoVoice ? "iphone-auto-voice active" : "iphone-auto-voice"} htmlFor="iphone-auto-voice" aria-label="自动倾听">
         <span><b>🎧 自动倾听</b><small>{autoVoice ? "手机放在桌上即可，识别结束会自动继续" : "关闭时，每次需要手动点“说话操作”"}</small></span>
-        <input type="checkbox" checked={autoVoice} onChange={(event) => changeAutoVoice(event.target.checked)} />
+        <input id="iphone-auto-voice" type="checkbox" checked={autoVoice} onChange={(event) => changeAutoVoice(event.target.checked)} />
         <i aria-hidden="true" />
       </label>
       <p className="iphone-voice-status">{voiceStatus}</p>
       <details className="iphone-answer-drawer"><summary>数字答案 0–24</summary><div>{Array.from({ length: 25 }, (_, value) => <button type="button" key={value} onClick={() => sendAnswer(value)}>{value}</button>)}</div></details>
       {uiState.actions.length > 0 && <section className="iphone-remote-actions"><small>电视当前可执行</small><div>{uiState.actions.map((action, index) => <button type="button" key={`${action}-${index}`} onClick={() => send({ type: "voice", transcript: action })}>{action}</button>)}</div></section>}
-      <footer>房间 {roomCode.slice(0, 4)} {roomCode.slice(4)} · 电视与 iPhone 不传输画面，只同步操作</footer>
+      <footer><span>房间 {roomCode.slice(0, 4)} {roomCode.slice(4)} · 电视与 iPhone 不传输画面，只同步操作</span>{status === "connected" && <button type="button" onClick={disconnect}>断开电视连接</button>}</footer>
     </main>
   );
 }

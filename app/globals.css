@@ -50,6 +50,7 @@ button { color: inherit; }
 }
 
 .app-shell { min-height: 100vh; overflow: hidden; position: relative; }
+.home-stage { min-height: 100vh; }
 .sky-decor { position: absolute; opacity: 0.65; font-size: 5rem; filter: brightness(1.5); z-index: 0; }
 .sky-decor-one { top: 9rem; left: 2%; }
 .sky-decor-two { top: 25rem; right: 1%; font-size: 4rem; }
@@ -615,9 +616,10 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
 /* Task 08 · Living-room casting and large-screen layout */
 @media (min-width: 1100px) and (orientation: landscape) {
   .game-shell { height: 100dvh; min-height: 0; padding-bottom: 0; overflow: hidden; }
+  .game-topbar, .player-rail, .control-deck { width: calc(100% - 24px); }
   .game-topbar { min-height: 72px; height: 72px; }
   .player-rail { min-height: 67px; margin-top: 8px; margin-bottom: 8px; }
-  .control-deck { height: calc(100dvh - 158px); min-height: 0; align-items: stretch; }
+  .control-deck { height: calc(100dvh - 158px); min-height: 0; grid-template-columns: clamp(190px,15vw,238px) minmax(0,1fr) clamp(205px,16vw,258px); align-items: stretch; }
   .current-player-card, .board-stage, .journey-log { height: 100%; min-height: 0; }
   .current-player-card { overflow-y: auto; }
   .board-stage { display: flex; }
@@ -746,12 +748,15 @@ html.tv-native-mirror body {
   background: #dff5f1;
 }
 html.tv-native-mirror .game-shell.tv-mode {
+  top: 0;
+  left: 0;
   width: 100vw;
   min-width: 0;
   height: 100dvh;
   min-height: 0;
   padding: 0;
   overflow: hidden;
+  transform: none;
 }
 html.tv-native-mirror .game-shell.tv-mode .game-topbar,
 html.tv-native-mirror .game-shell.tv-mode .player-rail,
@@ -850,6 +855,18 @@ html.tv-native-mirror .game-shell.tv-mode .voice-wave { display: none; }
 html.tv-native-mirror .game-shell.tv-mode .voice-ready > button { min-width: 25px; min-height: 22px; padding: 0 3px; font-size: 5px; }
 html.tv-native-mirror .game-shell.tv-mode .board-stage { display: flex; padding: 4px; border-radius: 13px; }
 html.tv-native-mirror .game-shell.tv-mode .game-camera-shell { border-radius: 10px; }
+html.tv-native-mirror .game-shell.tv-mode .control-deck { grid-template-columns: minmax(0,1fr); }
+html.tv-native-mirror .game-shell.tv-mode .current-player-card,
+html.tv-native-mirror .game-shell.tv-mode .journey-log { display: none !important; }
+html.tv-native-mirror .game-shell.tv-mode .board-stage { grid-column: 1; width: 100%; }
+html.tv-native-mirror .game-shell.tv-mode .classic-live-board {
+  min-width: 0;
+  min-height: 0;
+  grid-template-columns: repeat(24,minmax(0,1fr));
+  grid-template-rows: repeat(10,minmax(0,1fr));
+}
+html.tv-native-mirror .game-shell.tv-mode .classic-live-tile { grid-area: var(--mobile-grid-area) !important; }
+html.tv-native-mirror .game-shell.tv-mode .classic-board-center { grid-area: 2 / 2 / 10 / 24; }
 html.tv-native-mirror .game-shell.tv-mode .camera-status { width: 25%; padding: 7px 8px; }
 html.tv-native-mirror .game-shell.tv-mode .camera-mode,
 html.tv-native-mirror .game-shell.tv-mode .camera-status > small { font-size: 6px; }
@@ -917,11 +934,66 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
   max-height: 92dvh;
   overflow-y: auto;
 }
+@media (orientation: landscape) {
+  html.tv-native-mirror .game-shell.tv-mode .control-deck {
+    position: relative;
+  }
+  html.tv-native-mirror .game-shell.tv-mode .current-player-card {
+    position: absolute;
+    z-index: 20;
+    top: 50%;
+    left: 9%;
+    width: 118px;
+    height: auto;
+    max-height: 62%;
+    padding: 8px;
+    display: block !important;
+    overflow-y: auto;
+    transform: translateY(-50%);
+    background: rgba(255,253,247,.9);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 10px 30px rgba(20,56,52,.18);
+  }
+  html.tv-native-mirror .game-shell.tv-mode .current-player-card .current-avatar {
+    width: 42px;
+    height: 42px;
+    margin: 2px auto 4px;
+  }
+  html.tv-native-mirror .game-shell.tv-mode .current-player-card .current-avatar > span { font-size: 25px; }
+  html.tv-native-mirror .game-shell.tv-mode .current-player-card h1 { font-size: 13px; }
+  html.tv-native-mirror .game-shell.tv-mode .current-player-card .asset-total { margin-top: 5px; padding: 6px 3px; }
+  html.tv-native-mirror .game-shell.tv-mode .current-player-card .asset-total strong { font-size: 12px; }
+  html.tv-native-mirror .game-shell.tv-mode .current-player-card .asset-mini-grid,
+  html.tv-native-mirror .game-shell.tv-mode .current-player-card .voice-ready { display: none; }
+  html.tv-native-mirror .game-shell.tv-mode .current-player-card .manage-assets-button {
+    min-height: 28px;
+    margin-top: 5px;
+    display: block;
+    font-size: 6px;
+  }
+  html.tv-native-mirror .game-shell.tv-mode .journey-log {
+    position: absolute;
+    z-index: 20;
+    top: 50%;
+    right: 9%;
+    width: 145px;
+    height: auto;
+    max-height: 62%;
+    padding: 8px;
+    display: flex !important;
+    overflow: hidden;
+    transform: translateY(-50%);
+    background: rgba(255,253,247,.9);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 10px 30px rgba(20,56,52,.18);
+  }
+  html.tv-native-mirror .game-shell.tv-mode .journey-log .log-list article:nth-child(n+4) { display: none; }
+}
 .tv-rotate-prompt { display: none; }
 @media (orientation: portrait) {
   html.tv-native-mirror .tv-rotate-prompt {
     position: fixed;
-    z-index: 200;
+    z-index: 400;
     inset: 0;
     display: grid;
     place-content: center;
@@ -1059,32 +1131,96 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
   .classic-turn-actions .start-turn-button b { font-size: 11px; }
 }
 
-/* The playable game uses the same proportional 1600×900 stage as the handoff previews. */
+/* The playable game fills the available landscape viewport. */
 .live-game-stage {
   position: fixed;
   z-index: 0;
   inset: 0;
-  padding-bottom: 12px;
-  display: grid;
-  align-items: start;
-  justify-items: center;
+  padding: 0;
   overflow: hidden;
   background: #182322;
 }
 .live-game-stage .game-shell {
-  width: 1600px;
-  min-width: 1600px;
+  position: relative;
+  width: 100vw;
+  min-width: 0;
   max-width: none;
-  height: 900px;
+  height: 100dvh;
   min-height: 0;
   margin: 0;
   padding-bottom: 0;
   overflow: hidden;
-  transform: scale(var(--live-game-scale,1));
-  transform-origin: top center;
+  transform: none;
 }
-.live-game-stage .game-shell:not(.tv-mode) .control-deck { height: 742px; min-height: 0; }
-.live-game-stage .game-shell.tv-mode .control-deck { height: 809px; min-height: 0; }
+.live-game-stage.proportional-large-stage .game-shell {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1600px;
+  min-width: 1600px;
+  height: 900px;
+  transform: translate(-50%,-50%) scale(var(--large-screen-scale,1));
+  transform-origin: center;
+}
+.live-game-stage.proportional-large-stage .game-topbar,
+.live-game-stage.proportional-large-stage .player-rail,
+.live-game-stage.proportional-large-stage .control-deck {
+  width: calc(100% - 24px);
+}
+.live-game-stage.proportional-large-stage .control-deck {
+  height: 742px;
+}
+.live-game-stage.proportional-large-stage .game-shell.tv-mode .control-deck {
+  height: 828px;
+}
+.live-game-stage .game-shell.phase-answering .control-deck > .current-player-card,
+.live-game-stage .game-shell.phase-answering .control-deck > .journey-log {
+  display: none !important;
+}
+.live-game-stage .game-shell.phase-answering .classic-math-panel {
+  z-index: 30;
+}
+
+@media (min-width: 1920px) and (min-height: 1080px) {
+  .home-stage { --home-ui-scale: 1.2; }
+  .home-stage {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 1600px;
+    height: 900px;
+    overflow: auto;
+    background: #dff5f1;
+    transform: translate(-50%,-50%) scale(var(--home-ui-scale));
+    transform-origin: center;
+  }
+  .home-stage .app-shell { min-height: 900px; }
+  .home-stage .app-shell > .modal-backdrop,
+  .home-stage > .remote-pairing-backdrop {
+    position: absolute;
+    width: 1600px;
+    height: 900px;
+  }
+}
+@media (min-width: 3840px) and (min-height: 2160px) {
+  .home-stage { --home-ui-scale: 2.4; }
+}
+@media (min-width: 7000px) and (min-height: 3900px) {
+  .home-stage { --home-ui-scale: 4.33; }
+}
+@media (min-width: 7500px) and (min-height: 4200px) {
+  .home-stage { --home-ui-scale: 4.75; }
+}
+.live-game-stage.proportional-large-stage .classic-live-board {
+  grid-template-columns: repeat(24,minmax(0,1fr));
+  grid-template-rows: repeat(10,minmax(0,1fr));
+}
+.live-game-stage.proportional-large-stage .classic-live-tile {
+  grid-area: var(--mobile-grid-area) !important;
+}
+.live-game-stage.proportional-large-stage .classic-board-center {
+  grid-area: 2 / 2 / 10 / 24;
+}
 
 /* Live game overlays · sofa-readable typography within the 1600×900 stage. */
 .live-game-stage .modal-backdrop,
@@ -1264,6 +1400,8 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
 }
 .remote-pairing-dialog > header { padding: 25px 30px; display: flex; align-items: center; gap: 19px; color: #fff; background: linear-gradient(135deg,#177d72,#123f49); }
 .remote-pairing-dialog > header > span { width: 78px; height: 78px; flex: 0 0 78px; display: grid; place-items: center; border-radius: 23px; background: rgba(255,255,255,.14); font-size: 43px; }
+.remote-pairing-dialog > header > div { min-width: 0; flex: 1; }
+.remote-pairing-dialog > header > button { width: 46px; height: 46px; flex: 0 0 46px; align-self: flex-start; border: 1px solid rgba(255,255,255,.25); border-radius: 14px; color: #fff; background: rgba(255,255,255,.12); cursor: pointer; font-size: 27px; line-height: 1; }
 .remote-pairing-dialog > header small { color: #a7e4d7; font-size: 14px; font-weight: 1000; letter-spacing: .08em; }
 .remote-pairing-dialog > header h2 { margin: 4px 0; font-size: 36px; }
 .remote-pairing-dialog > header p { margin: 0; color: rgba(255,255,255,.72); font-size: 16px; }
@@ -1274,11 +1412,14 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
 .remote-link-state i,.remote-tv-badge i,.iphone-remote-header > i { width: 11px; height: 11px; display: block; border-radius: 50%; background: #d59b22; box-shadow: 0 0 0 5px rgba(213,155,34,.13); }
 .remote-link-state.state-connected { color: #176a55; background: #e0f6ec; }.remote-link-state.state-connected i,.remote-tv-badge.state-connected i,.iphone-remote-header > i.state-connected { background: #28aa78; }
 .remote-link-state.state-error { color: #98483a; background: #ffe6dd; }.remote-link-state.state-error i,.iphone-remote-header > i.state-error { background: #e16e59; }
+.iphone-remote-header > i.state-disconnected { background: #87958f; box-shadow: 0 0 0 5px rgba(89,108,100,.12); }
 .remote-pairing-copy > small { margin-top: 17px; display: block; color: #758882; font-size: 14px; }
 .remote-pairing-copy > b { margin: 7px 0 17px; display: block; color: #164b48; font-size: 50px; letter-spacing: .12em; }
 .remote-pairing-copy ol { margin: 0; padding-left: 27px; color: #4d6661; font-size: 17px; font-weight: 800; line-height: 1.9; }
 .remote-pairing-dialog > footer { padding: 17px 30px; display: flex; align-items: center; justify-content: space-between; gap: 16px; color: #d9eee8; background: #204f4d; font-size: 14px; }
+.remote-pairing-dialog > footer > div { display: flex; gap: 9px; }
 .remote-pairing-dialog > footer button { min-height: 54px; padding: 0 21px; border: 0; border-radius: 15px; color: #563d08; background: #ffdb72; cursor: pointer; font-size: 15px; font-weight: 1000; }
+.remote-pairing-dialog > footer .remote-disconnect-button { color: #fff; background: #a94d43; }
 .remote-tv-badge { position: fixed; z-index: 260; right: 22px; bottom: 22px; min-height: 52px; padding: 0 18px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,.5); border-radius: 999px; color: #fff; background: rgba(16,68,66,.92); box-shadow: 0 12px 30px rgba(0,25,28,.35); cursor: pointer; font-size: 15px; font-weight: 1000; }
 
 .iphone-remote-shell {
@@ -1305,11 +1446,118 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
 .iphone-voice-status { min-height: 36px; margin: 7px 3px 0; color: #677d77; font-size: 11px; line-height: 1.5; text-align: center; }
 .iphone-answer-drawer { margin-top: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,.75); border-radius: 18px; background: rgba(255,255,255,.65); }.iphone-answer-drawer summary { padding: 15px 17px; cursor: pointer; font-size: 14px; font-weight: 1000; }.iphone-answer-drawer > div { padding: 0 10px 12px; display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; }.iphone-answer-drawer button { min-height: 45px; border: 1px solid #d6e1db; border-radius: 12px; color: #28514c; background: #fff; font-size: 16px; font-weight: 1000; }
 .iphone-remote-actions { margin-top: 9px; padding: 12px; border-radius: 17px; background: rgba(255,255,255,.56); }.iphone-remote-actions > small { color: #758781; font-size: 10px; }.iphone-remote-actions > div { margin-top: 7px; display: flex; gap: 6px; overflow-x: auto; }.iphone-remote-actions button { min-width: 105px; min-height: 42px; padding: 5px 9px; border: 1px solid #d7e2dc; border-radius: 12px; background: #fff; font-size: 11px; font-weight: 900; }
-.iphone-remote-shell > footer { padding: 14px 5px 2px; color: #74847f; font-size: 10px; line-height: 1.5; text-align: center; }
+.iphone-disconnected { position: fixed; z-index: 5; inset: 0; padding: 24px; display: grid; place-content: center; grid-template-columns: minmax(0,360px); gap: 11px; color: #244d48; background: rgba(239,247,240,.97); text-align: center; }.iphone-disconnected > span { font-size: 52px; }.iphone-disconnected b,.iphone-disconnected small { display: block; }.iphone-disconnected b { font-size: 22px; }.iphone-disconnected small { margin-top: 7px; color: #71847d; font-size: 12px; line-height: 1.6; }.iphone-disconnected button { min-height: 52px; border: 1px solid #cbdcd3; border-radius: 15px; background: #fff; font-weight: 1000; }.iphone-disconnected button:first-of-type { margin-top: 7px; color: #fff; border: 0; background: #187d70; }
+.iphone-remote-shell > footer { padding: 14px 5px 2px; display: grid; justify-items: center; gap: 9px; color: #74847f; font-size: 10px; line-height: 1.5; text-align: center; }.iphone-remote-shell > footer button { min-height: 40px; padding: 0 16px; border: 1px solid #e1bbb4; border-radius: 12px; color: #98483a; background: rgba(255,255,255,.8); font-size: 11px; font-weight: 1000; }
 .iphone-remote-shell button:active { transform: scale(.96); filter: brightness(.96); }
 
+@media (min-width: 1100px) and (orientation: landscape) {
+  .live-game-stage .control-deck {
+    position: relative;
+    grid-template-columns: minmax(0,1fr);
+  }
+  .live-game-stage .control-deck > .board-stage {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: auto;
+    grid-column: auto;
+  }
+  .live-game-stage .control-deck > .board-stage > .game-camera-shell {
+    position: absolute;
+    inset: 7px;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    flex: none;
+  }
+  .live-game-stage .control-deck > .board-stage .classic-live-board {
+    width: 100%;
+    height: 100%;
+  }
+  .live-game-stage .control-deck > .current-player-card,
+  .live-game-stage .control-deck > .journey-log {
+    position: absolute;
+    z-index: 24;
+    top: 50%;
+    display: flex;
+    transform: translateY(-50%);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 18px 48px rgba(20,56,52,.2);
+  }
+  .live-game-stage .control-deck > .current-player-card {
+    left: clamp(120px,10vw,190px);
+    width: clamp(190px,15vw,235px);
+    height: auto;
+    max-height: calc(100% - 220px);
+    padding: 18px 14px;
+    display: block;
+    overflow-y: auto;
+  }
+  .live-game-stage .control-deck > .journey-log {
+    right: clamp(120px,10vw,190px);
+    width: clamp(210px,17vw,270px);
+    height: auto;
+    max-height: calc(100% - 220px);
+    min-height: 0;
+    padding: 16px 13px;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .live-game-stage .control-deck > .current-player-card .current-avatar { width: 70px; height: 70px; margin: 8px auto 5px; }
+  .live-game-stage .control-deck > .current-player-card .current-avatar > span { font-size: 43px; }
+  .live-game-stage .control-deck > .current-player-card h1 { font-size: 21px; }
+  .live-game-stage .control-deck > .current-player-card > p { display: none; }
+  .live-game-stage .control-deck > .current-player-card .asset-total { padding: 10px 6px; }
+  .live-game-stage .control-deck > .current-player-card .asset-total strong { font-size: 24px; }
+  .live-game-stage .control-deck > .current-player-card .voice-ready { display: none; }
+  .live-game-stage .control-deck > .journey-log .log-list { min-height: 0; flex: 1; overflow-y: auto; }
+  .live-game-stage .control-deck > .journey-log .log-list article:nth-child(n+4) { display: none; }
+  .live-game-stage .control-deck > .journey-log .game-rule-note { display: none; }
+  .live-game-stage .game-shell.phase-answering .control-deck > .current-player-card,
+  .live-game-stage .game-shell.phase-answering .control-deck > .journey-log {
+    display: none;
+  }
+  .live-game-stage .game-shell.phase-answering .classic-math-panel {
+    z-index: 30;
+  }
+  .live-game-stage .game-shell.tv-mode .player-rail {
+    height: 64px;
+    min-height: 64px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+  }
+  .live-game-stage .game-shell.tv-mode .control-deck {
+    height: calc(100dvh - 72px);
+  }
+}
+
 @media (orientation: landscape) and (max-height: 560px) {
-  .iphone-remote-shell { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 12px; }
+  .iphone-remote-shell { width: 100%; min-height: 100dvh; padding: max(7px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(7px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left)); display: grid; grid-template-columns: minmax(245px,.9fr) minmax(285px,1.1fr); grid-template-rows: auto auto auto auto; align-content: start; gap: 7px 10px; overflow-y: auto; }
+  .iphone-remote-header { grid-column: 1 / -1; min-height: 48px; padding: 5px 9px; border-radius: 15px; }.iphone-remote-header > span { width: 38px; height: 38px; border-radius: 12px; font-size: 22px; }.iphone-remote-header small { font-size: 9px; }.iphone-remote-header b { margin-top: 1px; font-size: 13px; }
+  .iphone-remote-now { grid-column: 1; grid-row: 2; min-height: 82px; padding: 10px; border-radius: 16px; }.iphone-remote-now h1 { margin: 2px 0; font-size: 20px; }
+  .iphone-remote-primary { grid-column: 1; grid-row: 3; min-height: 60px; padding: 8px 14px; border-radius: 16px; }.iphone-remote-primary b { font-size: 17px; }
+  .iphone-remote-intents { grid-column: 1; grid-row: 4; }.iphone-remote-intents button { min-height: 48px; border-radius: 13px; font-size: 11px; }
+  .iphone-remote-navigation { grid-column: 2; grid-row: 2 / span 2; width: min(100%,270px); height: 149px; margin: 0 auto; }.iphone-remote-navigation button { border-radius: 14px; }
+  .iphone-remote-secondary { grid-column: 2; grid-row: 4; }
+  .iphone-auto-voice,.iphone-voice-status,.iphone-answer-drawer,.iphone-remote-actions,.iphone-remote-shell > footer { grid-column: 1 / -1; }
   .iphone-remote-header,.iphone-remote-now,.iphone-remote-primary,.iphone-remote-intents,.iphone-remote-secondary,.iphone-auto-voice,.iphone-voice-status,.iphone-answer-drawer,.iphone-remote-actions,.iphone-remote-shell > footer { margin-top: 0; }
-  .iphone-remote-navigation { margin-top: 0; }
+}
+
+@media (max-width: 680px) and (orientation: landscape) and (max-height: 560px) {
+  .iphone-remote-shell { grid-template-columns: minmax(210px,.9fr) minmax(250px,1.1fr); }
+}
+
+@media (max-width: 760px) {
+  .remote-pairing-backdrop { padding: 10px; }
+  .remote-pairing-dialog { max-height: calc(100dvh - 20px); overflow-y: auto; border-radius: 22px; }
+  .remote-pairing-dialog > header { padding: 16px; gap: 11px; }.remote-pairing-dialog > header > span { width: 52px; height: 52px; flex-basis: 52px; border-radius: 16px; font-size: 29px; }.remote-pairing-dialog > header > button { width: 38px; height: 38px; flex-basis: 38px; border-radius: 11px; font-size: 23px; }.remote-pairing-dialog > header small { font-size: 9px; }.remote-pairing-dialog > header h2 { font-size: 21px; }.remote-pairing-dialog > header p { font-size: 11px; }
+  .remote-pairing-main { padding: 16px; grid-template-columns: 1fr; justify-items: center; gap: 15px; }.remote-qr { width: 220px; height: 220px; }.remote-qr svg { width: 190px; height: 190px; }.remote-pairing-copy > b { font-size: 32px; }.remote-pairing-copy ol { font-size: 13px; }
+  .remote-pairing-dialog > footer { padding: 13px 16px; align-items: stretch; flex-direction: column; }.remote-pairing-dialog > footer > div { display: grid; grid-template-columns: 1fr 1fr; }.remote-pairing-dialog > footer button { min-height: 46px; padding: 0 11px; font-size: 12px; }
+}
+
+.live-game-stage.proportional-large-stage .control-deck {
+  height: 742px;
+}
+.live-game-stage.proportional-large-stage .game-shell.tv-mode .control-deck {
+  height: 828px;
 }

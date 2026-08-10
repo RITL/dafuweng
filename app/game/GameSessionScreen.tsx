@@ -24,6 +24,7 @@ import { calculateAssetBreakdown, createSettlementRanking } from "./settlement";
 import { parseSpokenNumber } from "./voice";
 import type { UiSound } from "./use-game-audio";
 import type { BoardTile, CityTile, GameSession, OwnedProperty, PlayerState } from "./types";
+import { getClassicBoardGridArea, shouldUseNativeMirrorLayout } from "./display";
 
 type TurnPhase = "ready" | "spinning" | "answering" | "moving" | "resolving" | "card" | "deciding" | "rescue" | "handoff";
 
@@ -413,13 +414,6 @@ function ClassicWorldBoard(props: Parameters<typeof ImmersiveWorldBoard>[0]) {
   const visiblePlayers = session.players.map((player, index) => index === session.currentPlayerIndex
     ? { ...player, position: displayPosition }
     : player);
-  const gridAreaFor = (index: number) => {
-    if (index < 20) return `14 / ${20 - index}`;
-    if (index < 32) return `${33 - index} / 1`;
-    if (index < 52) return `1 / ${index - 31}`;
-    return `${index - 50} / 20`;
-  };
-
   return (
     <div className="game-camera-shell classic-camera-shell">
       <section className="classic-live-board" aria-label="环球大富翁二维环形棋盘">
@@ -433,7 +427,11 @@ function ClassicWorldBoard(props: Parameters<typeof ImmersiveWorldBoard>[0]) {
             <article
               key={tile.id}
               className={`classic-live-tile live-${tile.type}${tile.index === displayPosition ? " current" : ""}${tile.type === "city" ? ` region-${tile.region}` : ""}`}
-              style={{ gridArea: gridAreaFor(tile.index), "--owner-color": ownerColor } as React.CSSProperties}
+              style={{
+                gridArea: getClassicBoardGridArea(tile.index, 20, 14),
+                "--mobile-grid-area": getClassicBoardGridArea(tile.index, 24, 10),
+                "--owner-color": ownerColor,
+              } as React.CSSProperties}
               title={tile.type === "city" ? `${tile.country} · ¥${numberFormatter.format(tile.price)}` : tile.description}
             >
               <i className="classic-tile-icon">{tile.icon}</i>
@@ -523,7 +521,8 @@ export function GameSessionScreen({
   const [voiceGuideOpen, setVoiceGuideOpen] = useState(false);
   const [tvMode, setTvMode] = useState(televisionMode);
   const effectiveTvMode = televisionMode || tvMode;
-  const [liveGameScale, setLiveGameScale] = useState(1);
+  const [nativeTouchLayout, setNativeTouchLayout] = useState(false);
+  const [largeScreenScale, setLargeScreenScale] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
@@ -570,21 +569,36 @@ export function GameSessionScreen({
   const currentAssets = calculateAssetBreakdown(currentPlayer);
 
   useEffect(() => {
-    const fitGameCanvas = () => {
-      const viewport = window.visualViewport;
-      const width = viewport?.width || window.innerWidth;
-      const height = viewport?.height || window.innerHeight;
-      setLiveGameScale(Math.max(.1, Math.min(width / 1600, (height - 12) / 900)));
-      window.scrollTo(0, 0);
+    const updateNativeLayout = () => {
+      const useNativeLayout = shouldUseNativeMirrorLayout(window.innerWidth, navigator.maxTouchPoints);
+      setNativeTouchLayout(useNativeLayout);
+      document.documentElement.classList.toggle("tv-native-mirror", useNativeLayout);
     };
-    fitGameCanvas();
-    window.addEventListener("resize", fitGameCanvas, { passive: true });
-    window.visualViewport?.addEventListener("resize", fitGameCanvas, { passive: true });
-    window.visualViewport?.addEventListener("scroll", fitGameCanvas, { passive: true });
+    updateNativeLayout();
+    window.addEventListener("resize", updateNativeLayout, { passive: true });
+    window.addEventListener("orientationchange", updateNativeLayout, { passive: true });
     return () => {
-      window.removeEventListener("resize", fitGameCanvas);
-      window.visualViewport?.removeEventListener("resize", fitGameCanvas);
-      window.visualViewport?.removeEventListener("scroll", fitGameCanvas);
+      window.removeEventListener("resize", updateNativeLayout);
+      window.removeEventListener("orientationchange", updateNativeLayout);
+      document.documentElement.classList.remove("tv-native-mirror");
+    };
+  }, []);
+
+  useEffect(() => {
+    const updateLargeScreenScale = () => {
+      const layoutWidth = Math.max(window.innerWidth, document.documentElement.clientWidth);
+      const layoutHeight = Math.max(window.innerHeight, document.documentElement.clientHeight);
+      const emulatedDevice = window.screen.width / layoutWidth >= 3 && window.screen.height / layoutHeight >= 3;
+      const width = emulatedDevice ? window.screen.width : layoutWidth;
+      const height = emulatedDevice ? window.screen.height : layoutHeight;
+      setLargeScreenScale(width >= 1920 && height >= 1080 ? Math.min(width / 1600, height / 900) : 1);
+    };
+    updateLargeScreenScale();
+    window.addEventListener("resize", updateLargeScreenScale, { passive: true });
+    window.visualViewport?.addEventListener("resize", updateLargeScreenScale, { passive: true });
+    return () => {
+      window.removeEventListener("resize", updateLargeScreenScale);
+      window.visualViewport?.removeEventListener("resize", updateLargeScreenScale);
     };
   }, []);
 
@@ -1798,8 +1812,18 @@ export function GameSessionScreen({
   const handbookRent = (city: CityTile, level: number) => Math.round(city.baseRent * [1, 2, 3.25, 5, 7.5, 10][level] * economy.rentMultiplier / 10) * 10;
 
   return (
-    <div className="live-game-stage" style={{ "--live-game-scale": liveGameScale } as React.CSSProperties}>
-    <main className={`game-shell${effectiveTvMode ? " tv-mode" : ""}`} style={{ "--active-color": currentColor } as React.CSSProperties}>
+    <div
+      className={largeScreenScale > 1 ? "live-game-stage proportional-large-stage" : "live-game-stage"}
+      style={{ "--large-screen-scale": largeScreenScale } as React.CSSProperties}
+    >
+    {nativeTouchLayout && (
+      <div className="tv-rotate-prompt" role="status">
+        <span aria-hidden="true">📱</span>
+        <b>请横屏继续游戏</b>
+        <small>棋盘会在横屏后自动铺满，64 格和当前进度都会完整保留。</small>
+      </div>
+    )}
+    <main className={`game-shell${effectiveTvMode || nativeTouchLayout ? " tv-mode" : ""} phase-${turnPhase}`} style={{ "--active-color": currentColor } as React.CSSProperties}>
       <header className="game-topbar">
         <a className="brand game-brand" href="#game-top" aria-label="环球大富翁对局首页">
           <span className="brand-mark" aria-hidden="true">🌍</span>

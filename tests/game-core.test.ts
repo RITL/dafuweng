@@ -18,7 +18,7 @@ import {
   saveGameSession,
 } from "../app/game/session";
 import { calculateAssetBreakdown, createSettlementRanking } from "../app/game/settlement";
-import { shouldUseNativeMirrorLayout } from "../app/game/display";
+import { getClassicBoardGridArea, shouldUseNativeMirrorLayout } from "../app/game/display";
 import { parseSpokenNumber } from "../app/game/voice";
 import type { FamilyCard, GameSession, PlayerState } from "../app/game/types";
 
@@ -231,12 +231,24 @@ describe("随时结算、同分与共同冠军", () => {
 });
 
 describe("iPhone 原生清晰电视布局", () => {
-  test("触屏窄视口启用紧凑布局，桌面浏览器保持标准电视布局", () => {
+  test("窄视口启用紧凑布局，大屏浏览器保持标准电视布局", () => {
     assert.equal(shouldUseNativeMirrorLayout(844, 5), true);
     assert.equal(shouldUseNativeMirrorLayout(932, 5), true);
     assert.equal(shouldUseNativeMirrorLayout(1366, 5), false);
-    assert.equal(shouldUseNativeMirrorLayout(844, 0), false);
+    assert.equal(shouldUseNativeMirrorLayout(844, 0), true);
   });
+
+  test("手机横屏将相同的 64 格重排为更宽的闭环棋盘", () => {
+    assert.equal(getClassicBoardGridArea(0, 24, 10), "10 / 24");
+    assert.equal(getClassicBoardGridArea(23, 24, 10), "10 / 1");
+    assert.equal(getClassicBoardGridArea(24, 24, 10), "9 / 1");
+    assert.equal(getClassicBoardGridArea(31, 24, 10), "2 / 1");
+    assert.equal(getClassicBoardGridArea(32, 24, 10), "1 / 1");
+    assert.equal(getClassicBoardGridArea(55, 24, 10), "1 / 24");
+    assert.equal(getClassicBoardGridArea(56, 24, 10), "2 / 24");
+    assert.equal(getClassicBoardGridArea(63, 24, 10), "9 / 24");
+  });
+
 });
 
 describe("小朋友数学语音答案", () => {
