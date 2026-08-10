@@ -343,7 +343,7 @@ function ImmersiveWorldBoard({
             <i className="roulette-ball ball-one" style={{ "--ball-rotation": `${rouletteRotations[0]}deg` } as React.CSSProperties} aria-hidden="true" />
             <i className="roulette-ball ball-two" style={{ "--ball-rotation": `${rouletteRotations[1]}deg` } as React.CSSProperties} aria-hidden="true" />
             <strong className={phase === "spinning" ? "roulette-equation changing" : "roulette-equation"}>
-              {phase === "spinning" ? `${rouletteFace[0]} + ${rouletteFace[1]}` : rouletteResult ? `${rouletteResult.first} + ${rouletteResult.second}${currentPlayer.isChild && phase === "answering" ? " = ?" : ` = ${rouletteResult.total}`}` : "? + ?"}
+              {phase === "spinning" ? "转动中…" : rouletteResult ? `${rouletteResult.first} + ${rouletteResult.second}${currentPlayer.isChild && phase === "answering" ? " = ?" : ` = ${rouletteResult.total}`}` : "? + ?"}
             </strong>
           </div>
 
@@ -378,6 +378,117 @@ function ImmersiveWorldBoard({
   );
 }
 
+function ClassicWorldBoard(props: Parameters<typeof ImmersiveWorldBoard>[0]) {
+  const {
+    session,
+    displayPosition,
+    phase,
+    movementProgress,
+    rouletteFace,
+    rouletteResult,
+    rouletteRotations,
+    mathFeedback,
+    voiceStatus,
+    voiceVisualState,
+    arrivalNotice,
+    reducedMotion,
+    onStartTurn,
+    onAnswer,
+    onRetryAnswer,
+    onSkipAnimation,
+    onReducedMotionChange,
+  } = props;
+  const currentPlayer = session.players[session.currentPlayerIndex];
+  const isBusy = phase !== "ready";
+  const propertyOwners = useMemo(() => {
+    const owners = new Map<string, { player: PlayerState; property: OwnedProperty }>();
+    session.players.forEach((player) => player.properties.forEach((property) => {
+      owners.set(property.tileId, { player, property });
+    }));
+    return owners;
+  }, [session.players]);
+  const visiblePlayers = session.players.map((player, index) => index === session.currentPlayerIndex
+    ? { ...player, position: displayPosition }
+    : player);
+  const gridAreaFor = (index: number) => {
+    if (index < 20) return `14 / ${20 - index}`;
+    if (index < 32) return `${33 - index} / 1`;
+    if (index < 52) return `1 / ${index - 31}`;
+    return `${index - 50} / 20`;
+  };
+
+  return (
+    <div className="game-camera-shell classic-camera-shell">
+      <section className="classic-live-board" aria-label="环球大富翁二维环形棋盘">
+        {BOARD_TILES.map((tile) => {
+          const owner = propertyOwners.get(tile.id);
+          const playersHere = visiblePlayers.filter((player) => player.position === tile.index);
+          const ownerColor = owner
+            ? PLAYER_COLORS.find((item) => item.id === owner.player.color)?.hex ?? "#167f7b"
+            : undefined;
+          return (
+            <article
+              key={tile.id}
+              className={`classic-live-tile live-${tile.type}${tile.index === displayPosition ? " current" : ""}${tile.type === "city" ? ` region-${tile.region}` : ""}`}
+              style={{ gridArea: gridAreaFor(tile.index), "--owner-color": ownerColor } as React.CSSProperties}
+              title={tile.type === "city" ? `${tile.country} · ¥${numberFormatter.format(tile.price)}` : tile.description}
+            >
+              <i className="classic-tile-icon">{tile.icon}</i>
+              <b>{tile.shortLabel ?? tile.name}</b>
+              {owner && <em className="classic-owner-mark" title={`${owner.player.name}的城市`}>{owner.player.avatar}</em>}
+              {playersHere.length > 0 && (
+                <span className="classic-token-stack" aria-label={`${playersHere.map((player) => player.name).join("、")}在这里`}>
+                  {playersHere.map((player) => <i key={player.id} title={player.name}>{player.avatar}</i>)}
+                </span>
+              )}
+            </article>
+          );
+        })}
+
+        <section className={`classic-board-center phase-${phase}${reducedMotion ? " reduced-motion" : ""}`}>
+          <div className="classic-turn-copy">
+            <small>{phaseCopy[phase].eyebrow}</small>
+            <h2>{phase === "moving" ? `还剩 ${Math.max(0, (movementProgress?.total ?? rouletteResult?.total ?? 0) - (movementProgress?.current ?? 0))} 格` : phaseCopy[phase].title}</h2>
+            <p>{arrivalNotice && ["resolving", "deciding", "rescue", "handoff"].includes(phase) ? `📍 ${arrivalNotice}` : `${currentPlayer.avatar} ${currentPlayer.name}${phase === "ready" ? "，到你啦！" : ""}`}</p>
+          </div>
+
+          <div className="roulette-console twin-ball" aria-live="assertive" aria-label={phase === "spinning" ? "双球轮盘正在转动" : rouletteResult ? `两球点数 ${rouletteResult.first} 加 ${rouletteResult.second}` : "双球零到十二轮盘"}>
+            <div className="number-roulette physical-ring" aria-hidden="true">
+              {Array.from({ length: 26 }, (_, index) => index % 13).map((number, index) => <span key={`${number}-${index}`} style={{ "--roulette-index": index } as React.CSSProperties}>{number}</span>)}
+              <i className="gold-spinner"><b /><b /><b /><b /></i>
+            </div>
+            <i className="roulette-ball ball-one" style={{ "--ball-rotation": `${rouletteRotations[0]}deg` } as React.CSSProperties} aria-hidden="true" />
+            <i className="roulette-ball ball-two" style={{ "--ball-rotation": `${rouletteRotations[1]}deg` } as React.CSSProperties} aria-hidden="true" />
+            <strong className={phase === "spinning" ? "roulette-equation changing" : "roulette-equation"}>
+              {phase === "spinning" ? "转动中…" : rouletteResult ? `${rouletteResult.first} + ${rouletteResult.second}${currentPlayer.isChild && phase === "answering" ? " = ?" : ` = ${rouletteResult.total}`}` : "? + ?"}
+            </strong>
+          </div>
+
+          <div className="classic-turn-actions">
+            <button className="start-turn-button" type="button" onClick={onStartTurn} disabled={isBusy}>
+              <span>{phase === "ready" ? "开始前进" : phase === "spinning" ? "双球滚动中" : phase === "answering" ? "等待回答" : phase === "moving" ? "旅行中" : phase === "resolving" ? "落点确认中" : "交接中"}</span>
+              <b>{phase === "ready" ? "转动双球轮盘 →" : rouletteResult ? `${rouletteResult.first} + ${rouletteResult.second}${phase === "answering" ? " = ?" : ` = ${rouletteResult.total}`}` : "请稍候"}</b>
+            </button>
+            {isBusy && phase !== "answering" && <button className="skip-turn-animation" type="button" onClick={onSkipAnimation}>{phase === "spinning" ? "跳过轮盘动画" : phase === "moving" ? "跳过移动动画" : phase === "resolving" ? "立即显示结果" : phase === "handoff" ? "立即下一位" : "跳过动画"}</button>}
+          </div>
+
+          {phase === "answering" && (
+            <div className="math-answer-panel classic-math-panel">
+              <p><b>{mathFeedback || `请让 ${currentPlayer.name} 回答`}</b><small>🎙️ {voiceStatus}</small></p>
+              <button className="retry-listen-button" type="button" onClick={onRetryAnswer}>重新开启麦克风</button>
+              <div>{Array.from({ length: 25 }, (_, answer) => <button type="button" key={answer} onClick={() => onAnswer(answer)}>{answer}</button>)}</div>
+            </div>
+          )}
+
+          <button className={reducedMotion ? "motion-mode-toggle active" : "motion-mode-toggle"} type="button" onClick={() => onReducedMotionChange(!reducedMotion)} aria-pressed={reducedMotion}>{reducedMotion ? "✓ 已简化动效" : "简化动效"}</button>
+          <small className="classic-safety-note">每回合只生成一次公平随机点数</small>
+          {phase === "ready" && session.voiceEnabled && <em className="classic-voice-state">🎙️ {voiceStatus}</em>}
+        </section>
+      </section>
+    </div>
+  );
+}
+
 export function GameSessionScreen({
   session,
   isFresh,
@@ -407,6 +518,7 @@ export function GameSessionScreen({
   const [castGuideOpen, setCastGuideOpen] = useState(false);
   const [castGuideDevice, setCastGuideDevice] = useState<"iphone" | "android" | "computer">("iphone");
   const [tvMode, setTvMode] = useState(false);
+  const [liveGameScale, setLiveGameScale] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [displayStatus, setDisplayStatus] = useState("准备连接客厅电视");
   const [onboardingOpen, setOnboardingOpen] = useState(false);
@@ -451,6 +563,25 @@ export function GameSessionScreen({
   const ranking = useMemo(() => createSettlementRanking(session.players), [session.players]);
   const liveRank = new Map(ranking.map((entry) => [entry.player.id, entry.rank]));
   const currentAssets = calculateAssetBreakdown(currentPlayer);
+
+  useEffect(() => {
+    const fitGameCanvas = () => {
+      const viewport = window.visualViewport;
+      const width = viewport?.width || window.innerWidth;
+      const height = viewport?.height || window.innerHeight;
+      setLiveGameScale(Math.max(.1, Math.min(width / 1600, (height - 12) / 900)));
+      window.scrollTo(0, 0);
+    };
+    fitGameCanvas();
+    window.addEventListener("resize", fitGameCanvas, { passive: true });
+    window.visualViewport?.addEventListener("resize", fitGameCanvas, { passive: true });
+    window.visualViewport?.addEventListener("scroll", fitGameCanvas, { passive: true });
+    return () => {
+      window.removeEventListener("resize", fitGameCanvas);
+      window.visualViewport?.removeEventListener("resize", fitGameCanvas);
+      window.visualViewport?.removeEventListener("scroll", fitGameCanvas);
+    };
+  }, []);
 
   const stopVoiceListening = () => {
     const recognition = recognitionRef.current;
@@ -947,6 +1078,7 @@ export function GameSessionScreen({
     answerLockedRef.current = false;
     setMathFeedback("");
     setArrivalNotice("");
+    setRouletteResult(null);
     landingDecisionRef.current = null;
     financialActionRef.current = null;
     setLandingDecision(null);
@@ -1167,6 +1299,7 @@ export function GameSessionScreen({
     if (spinTickerRef.current !== null) window.clearInterval(spinTickerRef.current);
     spinTickerRef.current = null;
     setRouletteFace([roll.first, roll.second]);
+    setRouletteResult(roll);
     const originSession = requestedSession && Array.isArray(requestedSession.players)
       ? requestedSession
       : sessionRef.current;
@@ -1215,7 +1348,7 @@ export function GameSessionScreen({
     answerLockedRef.current = false;
     setMathFeedback("");
     setArrivalNotice("");
-    setRouletteResult(roll);
+    setRouletteResult(null);
     setRouletteRotations([firstTurns + firstTarget, secondTurns + secondTarget]);
     setMovementPosition(null);
     setMovementProgress(null);
@@ -1681,6 +1814,7 @@ export function GameSessionScreen({
   const handbookRent = (city: CityTile, level: number) => Math.round(city.baseRent * [1, 2, 3.25, 5, 7.5, 10][level] * economy.rentMultiplier / 10) * 10;
 
   return (
+    <div className="live-game-stage" style={{ "--live-game-scale": liveGameScale } as React.CSSProperties}>
     <main className={`game-shell${tvMode ? " tv-mode" : ""}`} style={{ "--active-color": currentColor } as React.CSSProperties}>
       <header className="game-topbar">
         <a className="brand game-brand" href="#game-top" aria-label="环球大富翁对局首页">
@@ -1771,7 +1905,7 @@ export function GameSessionScreen({
         </aside>
 
         <section className="board-stage" aria-live="polite">
-          <ImmersiveWorldBoard
+          <ClassicWorldBoard
             session={session}
             displayPosition={movementPosition ?? currentPlayer.position}
             phase={turnPhase}
@@ -2063,5 +2197,6 @@ export function GameSessionScreen({
         </div>
       )}
     </main>
+    </div>
   );
 }

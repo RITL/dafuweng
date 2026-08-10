@@ -1,0 +1,356 @@
+/* Keep every 16:9 preview fully inside the real browser or TV viewport. */
+.device-large-screen {
+  width: 100vw;
+  height: 100vh;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.device-large-screen .tv-stage {
+  position: fixed;
+  inset: 0;
+  padding-bottom: 12px;
+  display: grid;
+  align-items: start;
+  justify-items: center;
+  overflow: hidden;
+}
+
+.device-mobile {
+  width: 100vw;
+  height: 100vh;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.device-mobile .tv-stage {
+  position: fixed;
+  inset: 30px 0 8px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+body.device-mobile .tv-stage .artboard {
+  position: relative;
+  width: var(--preview-canvas-width);
+  height: var(--preview-canvas-height);
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  aspect-ratio: auto;
+  transform: scale(var(--tv-scale, 1));
+  transform-origin: center;
+}
+
+.device-large-screen .artboard {
+  position: relative;
+  width: 1600px;
+  height: 900px;
+  max-height: none;
+  margin: 0;
+  aspect-ratio: auto;
+  transform: scale(var(--tv-scale, 1));
+  transform-origin: top center;
+}
+
+.device-large-screen .preview-nav { display: none; }
+
+/* Board tile names are isolated from the chance dialog and home start button. */
+.tile.tile-chance::before { background: var(--gold); }
+.tile.tile-start {
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 3px;
+  display: flex;
+  color: #fff;
+  background: var(--coral);
+}
+
+/* The handoff navigator stays in the outer strip instead of covering UI. */
+.preview-nav {
+  top: 3px;
+  bottom: auto;
+  height: 25px;
+  padding: 2px;
+  gap: 3px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .24);
+  font-size: 9px;
+}
+
+.preview-nav a,
+.preview-nav i {
+  height: 19px;
+  min-width: 21px;
+  padding: 0 6px;
+  border-radius: 5px;
+}
+
+.preview-nav span {
+  padding: 0 5px;
+}
+
+/* Maximize the board while retaining both HUD columns. */
+.device-large-screen .game-grid {
+  padding: .45% .85% .8%;
+  grid-template-columns: 13.5% minmax(0, 1fr) 15.5%;
+  gap: .55%;
+}
+
+/*
+ * Living-room type scale: designed to remain readable from roughly five
+ * metres away. Secondary copy is never allowed to collapse into micro text.
+ */
+.device-large-screen .brand > i {
+  width: 44px;
+  height: 44px;
+  font-size: 28px;
+}
+
+.device-large-screen .brand span b { font-size: 22px; }
+.device-large-screen .brand span small { font-size: 14px; }
+.device-large-screen .topbar button {
+  min-height: 42px;
+  padding-inline: 14px;
+  font-size: 17px;
+}
+.device-large-screen .ready-dot,
+.device-large-screen .round small,
+.device-large-screen .round span { font-size: 15px; }
+.device-large-screen .round b { font-size: 34px; }
+
+.device-large-screen .player { padding: 6px 12px; }
+.device-large-screen .player > i { font-size: 30px; }
+.device-large-screen .player span b { font-size: 19px; }
+.device-large-screen .player span small { font-size: 14px; }
+.device-large-screen .player strong { font-size: 20px; }
+
+.device-large-screen .traveler > small { font-size: 14px; }
+.device-large-screen .traveler > i { font-size: clamp(30px, 3vw, 52px); }
+.device-large-screen .traveler h2 { font-size: clamp(20px, 1.5vw, 25px); }
+.device-large-screen .traveler p { font-size: 16px; line-height: 1.45; }
+.device-large-screen .traveler > strong { font-size: clamp(20px, 1.5vw, 26px); }
+.device-large-screen .traveler > div span { font-size: 14px; }
+.device-large-screen .traveler > div b { font-size: 17px; }
+.device-large-screen .traveler > button { font-size: 17px; line-height: 1.35; }
+
+.device-large-screen .log h3 { margin-bottom: 5%; font-size: 22px; }
+.device-large-screen .log article { padding: 5% 0; font-size: 17px; line-height: 1.35; }
+.device-large-screen .log article small { font-size: 14px; }
+.device-large-screen .log > div { margin-top: 8%; font-size: 16px; line-height: 1.45; }
+.device-large-screen .log > div small { font-size: 14px; }
+
+.device-large-screen .tile i { font-size: 34px; }
+.device-large-screen .tile b { font-size: 16px; }
+.device-large-screen .tile .token {
+  width: 25px;
+  height: 25px;
+  font-size: 15px;
+}
+.device-large-screen .board-center > small { font-size: 18px; }
+.device-large-screen .board-center h1 { font-size: 36px; }
+.device-large-screen .dice-pair i {
+  width: clamp(48px, 4vw, 68px);
+  height: clamp(48px, 4vw, 68px);
+  font-size: clamp(40px, 3.7vw, 60px);
+}
+.device-large-screen .dice-pair span,
+.device-large-screen .dice-pair b { font-size: 22px; }
+.device-large-screen .dice-button {
+  min-height: 58px;
+  padding: 10px 24px;
+}
+.device-large-screen .dice-button > i { font-size: 32px; }
+.device-large-screen .dice-button span { font-size: 12px; }
+.device-large-screen .dice-button b { font-size: 17px; }
+.device-large-screen .board-center > em,
+.device-large-screen .board-center > p { font-size: 15px; }
+.device-large-screen .answers button { min-width: 62px; font-size: 20px; }
+
+/* Dialogs use more horizontal space so their larger type still fits in-frame. */
+.device-large-screen .dialog { width: min(88%, 1000px); }
+.device-large-screen .dialog header small { font-size: 12px; }
+.device-large-screen .dialog h2 { font-size: clamp(28px, 2.2vw, 36px); }
+.device-large-screen .dialog > p,
+.device-large-screen .dialog > main > p { font-size: 15px; }
+.device-large-screen .dialog > footer button,
+.device-large-screen .dialog > footer > button { min-height: 48px; font-size: 15px; }
+.device-large-screen .rule-grid b { font-size: 15px; }
+.device-large-screen .rule-grid small { font-size: 12px; }
+.device-large-screen .tip,
+.device-large-screen .formula { font-size: 13px; }
+.device-large-screen .steps b { font-size: 14px; }
+.device-large-screen .steps small { font-size: 11px; }
+.device-large-screen .tabs button { font-size: 14px; }
+.device-large-screen .checks,
+.device-large-screen .onboarding ul { font-size: 12px; }
+
+.device-large-screen .city-dialog,
+.device-large-screen .asset { width: 92%; }
+.device-large-screen .city-dialog > aside small,
+.device-large-screen .city-dialog > aside p,
+.device-large-screen .city-dialog > aside > b { font-size: 12px; }
+.device-large-screen .city-dialog > main > header small { font-size: 12px; }
+.device-large-screen .balance span,
+.device-large-screen .stats > span,
+.device-large-screen .rent > b,
+.device-large-screen .voice { font-size: 13px; }
+.device-large-screen .balance span b { font-size: 18px; }
+.device-large-screen .stats b { font-size: 16px; }
+.device-large-screen .rent small { font-size: 10px; }
+.device-large-screen .rent span b { font-size: 13px; }
+.device-large-screen .city-dialog main > footer button { font-size: 14px; }
+
+.device-large-screen .chance > header,
+.device-large-screen .chance > small,
+.device-large-screen .chance .limits { font-size: 12px; }
+.device-large-screen .chance h1 { font-size: 34px; }
+.device-large-screen .chance > p { font-size: 14px; }
+.device-large-screen .chance > div span small { font-size: 11px; }
+.device-large-screen .chance > div span b,
+.device-large-screen .chance > button { font-size: 15px; }
+
+.device-large-screen .asset > header small,
+.device-large-screen .asset > header p { font-size: 12px; }
+.device-large-screen .asset > header h2 { font-size: 25px; }
+.device-large-screen .asset > main article div b { font-size: 15px; }
+.device-large-screen .asset > main article div small { font-size: 12px; }
+.device-large-screen .asset > main article > button,
+.device-large-screen .asset > footer,
+.device-large-screen .asset > footer button { font-size: 13px !important; }
+.device-large-screen .plans > button b,
+.device-large-screen .plans > p b { font-size: 14px; }
+.device-large-screen .plans > button small,
+.device-large-screen .plans > p span { font-size: 11px; }
+
+.device-large-screen .ranking header small,
+.device-large-screen .ranking header p,
+.device-large-screen .rank-head { font-size: 13px; }
+.device-large-screen .ranking main article { font-size: 16px; }
+.device-large-screen .ranking > footer button { font-size: 14px; }
+
+.device-large-screen .hero > div > small,
+.device-large-screen .setup header small { font-size: 13px; }
+.device-large-screen .hero p { font-size: 16px; }
+.device-large-screen .chips span { font-size: 13px; }
+.device-large-screen .setup header p { font-size: 13px; }
+.device-large-screen .setup-players b { font-size: 15px; }
+.device-large-screen .setup-players span,
+.device-large-screen .setup-players small { font-size: 11px; }
+.device-large-screen .settings article > b { font-size: 14px; }
+.device-large-screen .settings label,
+.device-large-screen .start { font-size: 14px; }
+
+/* Twin-ball physical roulette restored from the original game direction. */
+.roulette-preview {
+  position: relative;
+  width: 94px;
+  height: 94px;
+  margin: 4px auto 10px;
+  filter: drop-shadow(0 10px 14px rgba(2, 35, 37, .28));
+}
+
+.roulette-ring {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 6px solid #17191b;
+  border-radius: 50%;
+  background: repeating-conic-gradient(#e3433f 0 6.923deg, #202426 6.923deg 13.846deg);
+  box-shadow: inset 0 0 0 3px #d39b27, inset 0 0 0 20px #d9a43a, 0 0 0 2px rgba(255,255,255,.7);
+}
+
+.roulette-ring::after {
+  content: "";
+  position: absolute;
+  inset: 28%;
+  border: 2px solid #a66f13;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #f2c968, #a96d10);
+}
+
+.roulette-ring span {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  transform: translate(-50%, -50%) rotate(calc(var(--roulette-index) * 13.846deg)) translateY(-35px) rotate(calc(var(--roulette-index) * -13.846deg));
+  text-shadow: 0 1px 2px #000;
+  font-size: 5px;
+  font-weight: 1000;
+}
+
+.roulette-ball-preview {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 24%, #fff, #adb8ba 42%, #343a3c 77%);
+  box-shadow: 0 2px 4px rgba(0,0,0,.48);
+}
+
+.roulette-ball-preview.ball-a { transform: translate(-50%, -50%) rotate(52deg) translateY(-30px); }
+.roulette-ball-preview.ball-b { transform: translate(-50%, -50%) rotate(228deg) translateY(-30px); }
+.roulette-preview > strong {
+  position: absolute;
+  z-index: 12;
+  left: 50%;
+  bottom: -8px;
+  min-width: 72px;
+  padding: 5px 9px;
+  color: #44300e;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #ffdf75;
+  box-shadow: 0 4px 10px rgba(25,21,10,.3);
+  transform: translateX(-50%);
+  text-align: center;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.device-large-screen .roulette-preview { width: 174px; height: 174px; margin-bottom: 16px; }
+.device-large-screen .roulette-ring { border-width: 9px; box-shadow: inset 0 0 0 5px #d39b27, inset 0 0 0 38px #d9a43a, 0 0 0 3px rgba(255,255,255,.7); }
+.device-large-screen .roulette-ring span {
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -50%) rotate(calc(var(--roulette-index) * 13.846deg)) translateY(-67px) rotate(calc(var(--roulette-index) * -13.846deg));
+  font-size: 10px;
+}
+.device-large-screen .roulette-ball-preview { width: 17px; height: 17px; }
+.device-large-screen .roulette-ball-preview.ball-a { transform: translate(-50%, -50%) rotate(52deg) translateY(-57px); }
+.device-large-screen .roulette-ball-preview.ball-b { transform: translate(-50%, -50%) rotate(228deg) translateY(-57px); }
+.device-large-screen .roulette-preview > strong { bottom: -10px; min-width: 124px; padding: 7px 12px; font-size: 22px; }
+.device-large-screen .roulette-button { min-height: 66px; }
+.device-large-screen .roulette-button > i { font-size: 38px; }
+.device-large-screen .roulette-button span { font-size: 15px; }
+.device-large-screen .roulette-button b { font-size: 21px; }
+
+@media (max-height: 520px) {
+  .device-large-screen {
+    padding: 0;
+  }
+
+  .preview-nav {
+    top: 2px;
+    height: 21px;
+  }
+
+  .preview-nav a,
+  .preview-nav i {
+    height: 16px;
+  }
+}

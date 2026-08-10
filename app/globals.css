@@ -935,3 +935,299 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
   html.tv-native-mirror .tv-rotate-prompt b { font-size: 24px; }
   html.tv-native-mirror .tv-rotate-prompt small { font-size: 12px; line-height: 1.65; }
 }
+
+/* Live game · approved two-dimensional living-room board */
+.classic-camera-shell {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 18px;
+}
+
+.classic-live-board {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 720px;
+  min-height: 500px;
+  padding: 5px;
+  display: grid;
+  grid-template-columns: repeat(20, minmax(0, 1fr));
+  grid-template-rows: repeat(14, minmax(0, 1fr));
+  gap: 3px;
+  overflow: hidden;
+  border: 8px solid #e3c276;
+  border-radius: 18px;
+  background: #d2ebdf;
+  box-shadow: inset 0 0 0 2px #fff8de, 0 12px 30px rgba(32,71,64,.13);
+}
+
+.classic-live-tile {
+  position: relative;
+  z-index: 3;
+  min-width: 0;
+  min-height: 0;
+  padding: 7px 2px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(25,69,63,.14);
+  border-radius: 5px;
+  background: #fffdf6;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(29,69,62,.06);
+}
+.classic-live-tile::before { content: ""; position: absolute; inset: 0 0 auto; height: 4px; border-radius: 4px 4px 0 0; background: #d4cab4; }
+.classic-live-tile.region-asia::before { background: #ee725e; }
+.classic-live-tile.region-oceania::before { background: #3eaaa0; }
+.classic-live-tile.region-africa::before { background: #e7ad3d; }
+.classic-live-tile.region-europe::before { background: #7463c8; }
+.classic-live-tile.region-america::before { background: #4b92c8; }
+.classic-live-tile.live-chance::before, .classic-live-tile.live-bonus::before { background: #efb84a; }
+.classic-live-tile.live-destiny::before { background: #7463c8; }
+.classic-live-tile.live-airport::before { background: #4b92c8; }
+.classic-live-tile.live-rest::before { background: #72a95f; }
+.classic-live-tile.live-start { color: #fff; background: #ee725e; }
+.classic-live-tile.current { z-index: 5; border-color: var(--active-color); box-shadow: 0 0 0 3px color-mix(in srgb,var(--active-color) 30%,transparent), 0 7px 16px rgba(27,74,67,.22); }
+.classic-tile-icon { font-size: clamp(13px,1.2vw,22px); font-style: normal; line-height: 1; }
+.classic-live-tile > b { width: 100%; margin-top: 3px; overflow: hidden; color: inherit; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(6px,.52vw,10px); }
+.classic-owner-mark { position: absolute; top: 3px; right: 2px; width: 15px; height: 15px; display: grid; place-items: center; border: 1px solid #fff; border-radius: 50%; background: var(--owner-color); font-size: 8px; font-style: normal; }
+.classic-token-stack { position: absolute; z-index: 6; right: -3px; bottom: -4px; display: flex; }
+.classic-token-stack > i { width: 22px; height: 22px; margin-left: -7px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 50%; background: #e2f3ed; box-shadow: 0 3px 8px rgba(20,58,54,.25); font-size: 13px; font-style: normal; }
+
+.classic-board-center {
+  grid-area: 2 / 2 / 14 / 20;
+  position: relative;
+  z-index: 1;
+  padding: 18px 7%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 9px;
+  background: radial-gradient(circle at 50% 8%,rgba(255,255,255,.94),transparent 42%),linear-gradient(145deg,#c9eee2,#f9edc9);
+  text-align: center;
+}
+.classic-turn-copy small { color: #167d73; font-size: 13px; font-weight: 1000; letter-spacing: .13em; }
+.classic-turn-copy h2 { margin: 6px 0 3px; color: #183b3a; font-size: clamp(23px,2vw,36px); line-height: 1.15; }
+.classic-turn-copy p { margin: 0 0 8px; color: #5c7973; font-size: 14px; font-weight: 800; }
+.classic-board-center .roulette-console { width: 150px; height: 150px; margin: 3px auto 10px; }
+.classic-board-center .number-roulette.physical-ring span { font-size: 8px; }
+.classic-board-center .roulette-equation { min-width: 105px; padding: 7px 10px; font-size: 18px; }
+.classic-turn-actions { width: min(430px,70%); display: grid; gap: 6px; }
+.classic-turn-actions .start-turn-button { min-height: 62px; }
+.classic-turn-actions .start-turn-button span { font-size: 13px; }
+.classic-turn-actions .start-turn-button b { font-size: 18px; }
+.classic-turn-actions .skip-turn-animation { min-height: 34px; }
+.classic-math-panel { position: absolute; z-index: 10; inset: auto 4% 4%; width: 92%; transform: none; }
+.classic-board-center .motion-mode-toggle { position: absolute; right: 12px; bottom: 10px; }
+.classic-safety-note { margin-top: 7px; color: #6c817c; font-size: 10px; }
+.classic-voice-state { margin-top: 5px; color: #167d73; font-size: 11px; font-style: normal; font-weight: 900; }
+
+@media (min-width: 1100px) and (orientation: landscape) {
+  .game-shell:not(.tv-mode) .player-rail { width: calc(100% - 16px); margin: 8px auto; }
+  .game-shell:not(.tv-mode) .control-deck { width: calc(100% - 16px); grid-template-columns: 14% minmax(0,1fr) 16%; gap: 8px; }
+  .game-shell:not(.tv-mode) .board-stage { padding: 6px; }
+  .game-shell:not(.tv-mode) .current-player-card { padding: 18px 14px; border-radius: 18px; }
+  .game-shell:not(.tv-mode) .journey-log { padding: 18px 14px; border-radius: 18px; }
+  .game-shell:not(.tv-mode) .rail-avatar { width: 50px; height: 50px; flex-basis: 50px; font-size: 30px; }
+  .game-shell:not(.tv-mode) .rail-name b { font-size: 17px; }
+  .game-shell:not(.tv-mode) .rail-name small { font-size: 12px; }
+  .game-shell:not(.tv-mode) .rail-money b { font-size: 17px; }
+  .game-shell:not(.tv-mode) .current-player-card h1 { font-size: 30px; }
+  .game-shell:not(.tv-mode) .current-player-card > p { font-size: 13px; }
+  .game-shell:not(.tv-mode) .asset-total small { font-size: 12px; }
+  .game-shell:not(.tv-mode) .asset-total strong { font-size: 31px; }
+  .game-shell:not(.tv-mode) .asset-mini-grid small { font-size: 11px; }
+  .game-shell:not(.tv-mode) .asset-mini-grid b { font-size: 15px; }
+  .game-shell:not(.tv-mode) .manage-assets-button { min-height: 52px; font-size: 14px; }
+  .game-shell:not(.tv-mode) .log-heading b { font-size: 22px; }
+  .game-shell:not(.tv-mode) .log-heading small { font-size: 12px; }
+  .game-shell:not(.tv-mode) .log-list article b { font-size: 15px; }
+  .game-shell:not(.tv-mode) .log-list article small { font-size: 12px; }
+}
+
+@media (max-width: 1099px) and (orientation: landscape) {
+  .classic-live-board { min-width: 680px; min-height: 360px; }
+  .classic-board-center .roulette-console { width: 105px; height: 105px; }
+  .classic-turn-copy h2 { font-size: 20px; }
+  .classic-turn-copy p, .classic-turn-copy small { font-size: 9px; }
+  .classic-turn-actions .start-turn-button { min-height: 48px; }
+  .classic-turn-actions .start-turn-button span { font-size: 8px; }
+  .classic-turn-actions .start-turn-button b { font-size: 11px; }
+}
+
+/* The playable game uses the same proportional 1600×900 stage as the handoff previews. */
+.live-game-stage {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  padding-bottom: 12px;
+  display: grid;
+  align-items: start;
+  justify-items: center;
+  overflow: hidden;
+  background: #182322;
+}
+.live-game-stage .game-shell {
+  width: 1600px;
+  min-width: 1600px;
+  max-width: none;
+  height: 900px;
+  min-height: 0;
+  margin: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+  transform: scale(var(--live-game-scale,1));
+  transform-origin: top center;
+}
+.live-game-stage .game-shell:not(.tv-mode) .control-deck { height: 742px; min-height: 0; }
+.live-game-stage .game-shell.tv-mode .control-deck { height: 809px; min-height: 0; }
+
+/* Live game overlays · sofa-readable typography within the 1600×900 stage. */
+.live-game-stage .modal-backdrop,
+.live-game-stage .card-reveal-backdrop { padding: 28px; }
+
+/* Chance and destiny cards */
+.live-game-stage .family-card-dialog { width: 660px; max-height: 836px; }
+.live-game-stage .family-card-face { padding: 28px 36px 24px; border-width: 4px; border-radius: 36px; }
+.live-game-stage .family-card-face > header { margin: -28px -36px 22px; padding: 18px 25px; }
+.live-game-stage .family-card-face > header span { font-size: 15px; }
+.live-game-stage .family-card-face > header b { font-size: 14px; }
+.live-game-stage .family-card-face::before,
+.live-game-stage .family-card-face::after { top: 102px; font-size: 29px; }
+.live-game-stage .family-card-icon { width: 126px; height: 126px; margin-bottom: 14px; font-size: 72px; }
+.live-game-stage .family-card-face > small { font-size: 14px; }
+.live-game-stage .family-card-face h2 { margin: 8px 0 10px; font-size: 42px; }
+.live-game-stage .family-card-face > p { max-width: 540px; font-size: 18px; line-height: 1.55; }
+.live-game-stage .card-result { margin-top: 20px; padding: 16px 19px; gap: 16px; border-radius: 18px; }
+.live-game-stage .card-result > span { width: 50px; height: 50px; flex-basis: 50px; font-size: 24px; }
+.live-game-stage .card-result div small { font-size: 13px; }
+.live-game-stage .card-result div b { margin-top: 4px; font-size: 17px; }
+.live-game-stage .card-safety-limits { margin-top: 12px; gap: 8px; }
+.live-game-stage .card-safety-limits span { padding: 6px 10px; font-size: 11px; }
+.live-game-stage .family-card-face > button { min-height: 68px; margin-top: 17px; padding: 11px 18px; border-radius: 18px; }
+.live-game-stage .family-card-face > button span { font-size: 12px; }
+.live-game-stage .family-card-face > button b { font-size: 18px; }
+.live-game-stage .family-card-face > footer { margin-top: 13px; font-size: 11px; }
+
+/* City purchase, rent and upgrade panels */
+.live-game-stage .economy-dialog {
+  width: 1240px;
+  max-height: 820px;
+  grid-template-columns: 370px minmax(0,1fr);
+}
+.live-game-stage .economy-city-poster { min-height: 0; padding: 30px 28px; }
+.live-game-stage .city-deed-top span { font-size: 13px; }
+.live-game-stage .city-deed-top b { padding: 7px 11px; font-size: 12px; }
+.live-game-stage .city-emblem { width: 156px; height: 156px; margin: 58px auto 22px; }
+.live-game-stage .city-emblem i { font-size: 88px; }
+.live-game-stage .city-emblem span { width: 46px; height: 46px; font-size: 22px; }
+.live-game-stage .economy-city-poster > small { font-size: 14px; }
+.live-game-stage .economy-city-poster > h2 { margin-top: 9px; font-size: 48px; }
+.live-game-stage .economy-city-poster > p { font-size: 15px; }
+.live-game-stage .city-owner-ribbon { left: 42px; right: 42px; padding: 14px; font-size: 14px; }
+.live-game-stage .economy-deal-panel { padding: 27px 32px 20px; }
+.live-game-stage .economy-dialog-header { padding-bottom: 16px; }
+.live-game-stage .economy-dialog-header small { font-size: 13px; }
+.live-game-stage .economy-dialog-header h3 { margin-top: 5px; font-size: 34px; }
+.live-game-stage .economy-dialog-header > span { font-size: 31px; }
+.live-game-stage .economy-dialog-header > span b { font-size: 14px; }
+.live-game-stage .purchase-balance-preview { margin-top: 14px; padding: 12px 16px; }
+.live-game-stage .purchase-balance-preview small { font-size: 12px; }
+.live-game-stage .purchase-balance-preview b { font-size: 21px; }
+.live-game-stage .purchase-balance-preview > i { font-size: 13px; }
+.live-game-stage .economy-stat-row { margin-top: 11px; gap: 10px; }
+.live-game-stage .economy-stat-row > span { padding: 11px 13px; }
+.live-game-stage .economy-stat-row small { font-size: 12px; }
+.live-game-stage .economy-stat-row b { font-size: 19px; }
+.live-game-stage .rent-growth-board { margin-top: 11px; padding: 12px 14px; }
+.live-game-stage .rent-growth-board > header span b { font-size: 16px; }
+.live-game-stage .rent-growth-board > header span small { font-size: 11px; }
+.live-game-stage .rent-growth-board > header > em { font-size: 11px; }
+.live-game-stage .rent-growth-board > div { margin-top: 9px; gap: 8px; }
+.live-game-stage .rent-growth-board article { min-height: 101px; padding: 8px 6px; }
+.live-game-stage .rent-growth-board article > span { min-height: 29px; font-size: 21px; }
+.live-game-stage .rent-growth-board article:first-child > span,
+.live-game-stage .rent-growth-board article.hotel-level > span { font-size: 27px; }
+.live-game-stage .rent-growth-board article > small { font-size: 10px; }
+.live-game-stage .rent-growth-board article > b { font-size: 14px; }
+.live-game-stage .rent-growth-board article > em { font-size: 9px; }
+.live-game-stage .city-investment-note,
+.live-game-stage .cash-warning,
+.live-game-stage .economy-voice-hint { margin-top: 10px; padding: 10px 14px; }
+.live-game-stage .city-investment-note b,
+.live-game-stage .cash-warning b,
+.live-game-stage .economy-voice-hint span b { font-size: 13px; }
+.live-game-stage .city-investment-note small,
+.live-game-stage .cash-warning small,
+.live-game-stage .economy-voice-hint span small { font-size: 11px; }
+.live-game-stage .economy-actions { margin-top: 12px; gap: 10px; }
+.live-game-stage .economy-actions button { min-height: 66px; padding: 10px 14px; }
+.live-game-stage .economy-actions button span { font-size: 11px; }
+.live-game-stage .economy-actions button b { margin-top: 4px; font-size: 16px; }
+.live-game-stage .economy-deal-panel > footer { margin-top: 12px; font-size: 12px; }
+.live-game-stage .building-level-view b { font-size: 16px; }
+.live-game-stage .rent-result > b { font-size: 27px; }
+.live-game-stage .rent-result > small { font-size: 14px; }
+
+/* Asset manager and family rescue */
+.live-game-stage .asset-manager { width: 1240px; max-height: 820px; }
+.live-game-stage .asset-manager > header { padding: 22px 28px; }
+.live-game-stage .asset-manager > header h2 { font-size: 32px; }
+.live-game-stage .asset-manager > header p { font-size: 14px; }
+.live-game-stage .asset-manager > header button { width: 48px; height: 48px; font-size: 25px; }
+.live-game-stage .rescue-recommendation { padding: 14px 18px; }
+.live-game-stage .rescue-recommendation span { font-size: 12px; }
+.live-game-stage .rescue-recommendation b { font-size: 17px; }
+.live-game-stage .rescue-recommendation p { font-size: 12px; }
+.live-game-stage .rescue-plan-tabs > button { min-height: 66px; padding: 10px 12px; }
+.live-game-stage .rescue-plan-tabs i { font-size: 26px; }
+.live-game-stage .rescue-plan-tabs b { font-size: 14px; }
+.live-game-stage .rescue-plan-tabs small { font-size: 11px; }
+.live-game-stage .rescue-plan-detail > span b { font-size: 13px; }
+.live-game-stage .rescue-plan-detail > span small { font-size: 11px; }
+.live-game-stage .rescue-plan-detail > button { min-height: 52px; }
+.live-game-stage .rescue-plan-detail > button small { font-size: 10px; }
+.live-game-stage .rescue-plan-detail > button b { font-size: 13px; }
+.live-game-stage .asset-property-list { gap: 12px; padding: 17px 20px; }
+.live-game-stage .asset-property-list > article { padding: 16px; }
+.live-game-stage .asset-city-head > span { width: 55px; height: 55px; flex-basis: 55px; font-size: 33px; }
+.live-game-stage .asset-city-head p b { font-size: 17px; }
+.live-game-stage .asset-city-head p small { font-size: 11px; }
+.live-game-stage .asset-city-head > i { padding: 6px 9px; font-size: 10px; }
+.live-game-stage .asset-action-row button { min-height: 52px; padding: 9px 12px; }
+.live-game-stage .asset-action-row button span,
+.live-game-stage .asset-action-row button b { font-size: 13px; }
+.live-game-stage .asset-manager > footer { padding: 14px 22px; font-size: 12px; }
+.live-game-stage .asset-manager > footer button { min-height: 48px; padding: 0 17px; font-size: 13px; }
+
+/* Financial confirmations and end-of-game ranking */
+.live-game-stage .financial-confirm-dialog { width: 700px; padding: 38px; }
+.live-game-stage .financial-confirm-dialog > span { width: 92px; height: 92px; font-size: 49px; }
+.live-game-stage .financial-confirm-dialog > small { font-size: 13px; }
+.live-game-stage .financial-confirm-dialog h2 { font-size: 35px; }
+.live-game-stage .financial-confirm-dialog > p { padding: 19px; font-size: 17px; }
+.live-game-stage .financial-confirm-dialog > div button { min-height: 65px; font-size: 16px; }
+.live-game-stage .financial-confirm-dialog > footer { margin: 22px -38px -38px; padding: 14px; font-size: 12px; }
+.live-game-stage .confirm-dialog,
+.live-game-stage .restore-dialog { width: 650px; padding: 40px; }
+.live-game-stage .confirm-dialog.compact { width: 600px; }
+.live-game-stage .dialog-illustration { width: 92px; height: 92px; font-size: 49px; }
+.live-game-stage .confirm-dialog h2,
+.live-game-stage .restore-dialog h2 { font-size: 34px; }
+.live-game-stage .confirm-dialog > p,
+.live-game-stage .restore-dialog > p { max-width: 540px; font-size: 17px; }
+.live-game-stage .dialog-formula b { font-size: 15px; }
+.live-game-stage .dialog-formula span { font-size: 17px; }
+.live-game-stage .dialog-actions button { min-height: 61px; font-size: 16px; }
+.live-game-stage .winner-banner small { font-size: 15px; }
+.live-game-stage .winner-banner p { font-size: 16px; }
+.live-game-stage .ranking-head { font-size: 13px; }
+.live-game-stage .ranking-table article { min-height: 72px; font-size: 15px; }
+.live-game-stage .rank-person i { width: 45px; height: 45px; font-size: 20px; }
+.live-game-stage .rank-person b { font-size: 18px; }
+.live-game-stage .ranking-table article strong { font-size: 19px; }
+.live-game-stage .settlement-actions button { min-height: 62px; font-size: 16px; }

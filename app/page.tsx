@@ -29,8 +29,8 @@ interface DraftPlayer {
 const initialPlayers: DraftPlayer[] = [
   { id: 1, name: "爸爸", avatar: "🐼", color: "coral", isChild: false },
   { id: 2, name: "妈妈", avatar: "🦊", color: "ocean", isChild: false },
-  { id: 3, name: "小宝", avatar: "🐯", color: "sunny", isChild: true },
-  { id: 4, name: "大宝", avatar: "🐰", color: "grape", isChild: true },
+  { id: 3, name: "多肉", avatar: "🐯", color: "sunny", isChild: true },
+  { id: 4, name: "喜悦", avatar: "🐰", color: "grape", isChild: true },
 ];
 
 const featuredCities = BOARD_TILES.filter((tile) => tile.type === "city").slice(0, 8);
