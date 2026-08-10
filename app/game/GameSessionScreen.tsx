@@ -21,7 +21,6 @@ import type { AssetAction } from "./economy";
 import { advanceGameTurn, moveActivePlayer, rollRoulette } from "./session";
 import type { RouletteResult } from "./session";
 import { calculateAssetBreakdown, createSettlementRanking } from "./settlement";
-import { shouldUseNativeMirrorLayout } from "./display";
 import { parseSpokenNumber } from "./voice";
 import type { UiSound } from "./use-game-audio";
 import type { BoardTile, CityTile, GameSession, OwnedProperty, PlayerState } from "./types";
@@ -60,6 +59,9 @@ interface GameSessionScreenProps {
   musicEnabled: boolean;
   effectsEnabled: boolean;
   audioStarted: boolean;
+  televisionMode: boolean;
+  remoteControlled: boolean;
+  onOpenRemoteController: () => void;
   onMusicChange: (enabled: boolean) => void;
   onEffectsChange: (enabled: boolean) => void;
   playUiSound: (sound?: UiSound) => void;
@@ -495,6 +497,9 @@ export function GameSessionScreen({
   musicEnabled,
   effectsEnabled,
   audioStarted,
+  televisionMode,
+  remoteControlled,
+  onOpenRemoteController,
   onMusicChange,
   onEffectsChange,
   playUiSound,
@@ -515,12 +520,10 @@ export function GameSessionScreen({
   const [voiceVisualState, setVoiceVisualState] = useState<VoiceVisualState>(session.voiceEnabled ? "idle" : "off");
   const [recognizedTranscript, setRecognizedTranscript] = useState("");
   const [voiceGuideOpen, setVoiceGuideOpen] = useState(false);
-  const [castGuideOpen, setCastGuideOpen] = useState(false);
-  const [castGuideDevice, setCastGuideDevice] = useState<"iphone" | "android" | "computer">("iphone");
-  const [tvMode, setTvMode] = useState(false);
+  const [tvMode, setTvMode] = useState(televisionMode);
+  const effectiveTvMode = televisionMode || tvMode;
   const [liveGameScale, setLiveGameScale] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [displayStatus, setDisplayStatus] = useState("准备连接客厅电视");
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -594,6 +597,11 @@ export function GameSessionScreen({
   };
 
   const prepareMicrophone = async () => {
+    if (remoteControlled) {
+      setVoiceStatus("麦克风由已配对的 iPhone 遥控器提供");
+      setVoiceVisualState("idle");
+      return false;
+    }
     if (!navigator.mediaDevices?.getUserMedia) {
       setVoiceStatus("此浏览器不能申请麦克风，请使用数字按钮");
       setVoiceVisualState("unsupported");
@@ -654,6 +662,11 @@ export function GameSessionScreen({
     if (!targetSession.voiceEnabled) {
       setVoiceStatus("语音已关闭，可点击按钮");
       setVoiceVisualState("off");
+      return;
+    }
+    if (remoteControlled) {
+      setVoiceStatus(mode === "answer" ? "请在 iPhone 遥控器回答" : "等待 iPhone 遥控器操作");
+      setVoiceVisualState("idle");
       return;
     }
     const browserWindow = window as typeof window & {
@@ -808,7 +821,7 @@ export function GameSessionScreen({
       setVoiceStatus("提示音后开始回答…");
       setRecognizedTranscript("");
       setVoiceVisualState("requesting");
-      window.setTimeout(activateRecognition, tvMode ? 900 : 360);
+      window.setTimeout(activateRecognition, effectiveTvMode ? 900 : 360);
     } else activateRecognition();
   };
 
@@ -827,6 +840,11 @@ export function GameSessionScreen({
 
   const startFinancialListening = (mode: "landing" | "confirm" | "assets", targetSession: GameSession, withCue = true) => {
     if (!targetSession.voiceEnabled) return;
+    if (remoteControlled) {
+      setVoiceStatus("请在 iPhone 遥控器选择或说出操作");
+      setVoiceVisualState("idle");
+      return;
+    }
     const browserWindow = window as typeof window & {
       SpeechRecognition?: SpeechRecognitionConstructor;
       webkitSpeechRecognition?: SpeechRecognitionConstructor;
@@ -976,7 +994,7 @@ export function GameSessionScreen({
       setVoiceVisualState("idle");
       return;
     }
-    const needsVoiceGuide = session.voiceEnabled && window.localStorage.getItem(VOICE_GUIDE_KEY) !== "done";
+    const needsVoiceGuide = !remoteControlled && session.voiceEnabled && window.localStorage.getItem(VOICE_GUIDE_KEY) !== "done";
     if (needsVoiceGuide) {
       setVoiceGuideOpen(true);
       setVoiceStatus("首次使用，请先开启麦克风");
@@ -1596,6 +1614,14 @@ export function GameSessionScreen({
 
   const updateVoiceEnabled = (enabled: boolean) => {
     if (enabled) {
+      if (remoteControlled) {
+        const voiceSession = { ...sessionRef.current, voiceEnabled: true, updatedAt: Date.now() };
+        sessionRef.current = voiceSession;
+        onSessionChange(voiceSession);
+        setVoiceStatus("语音主持已开启，操作由 iPhone 遥控器接收");
+        setVoiceVisualState("idle");
+        return;
+      }
       setVoiceGuideOpen(true);
       setVoiceStatus("请开启并测试麦克风");
       setVoiceVisualState("requesting");
@@ -1612,27 +1638,16 @@ export function GameSessionScreen({
   };
 
   const toggleFullscreen = async () => {
-    const useNativeMirror = shouldUseNativeMirrorLayout(window.innerWidth, navigator.maxTouchPoints);
-    if (useNativeMirror) {
-      const enabled = !tvMode;
-      setTvMode(enabled);
-      setDisplayStatus(enabled ? "iPhone 原生清晰电视布局已开启 · 请保持横屏" : "已退出电视布局");
-      playUiSound("tap");
-      return;
-    }
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen();
-        setDisplayStatus("已退出全屏，电视布局仍然保留");
       } else {
         await document.documentElement.requestFullscreen();
         setTvMode(true);
-        setDisplayStatus("电视全屏已开启");
       }
       playUiSound("tap");
     } catch {
       setTvMode(true);
-      setDisplayStatus("浏览器未允许全屏，已切换为电视大字布局");
     }
   };
 
@@ -1647,11 +1662,6 @@ export function GameSessionScreen({
     } else if (turnPhaseRef.current === "ready") {
       window.setTimeout(() => announceTurn(sessionRef.current), 180);
     }
-  };
-
-  const closeCastGuide = () => {
-    setCastGuideOpen(false);
-    resumeGameInteraction();
   };
 
   const closeRules = () => {
@@ -1672,7 +1682,7 @@ export function GameSessionScreen({
     setOnboardingOpen(false);
     setOnboardingStep(0);
     playUiSound("success");
-    if (sessionRef.current.voiceEnabled && window.localStorage.getItem(VOICE_GUIDE_KEY) !== "done") {
+    if (!remoteControlled && sessionRef.current.voiceEnabled && window.localStorage.getItem(VOICE_GUIDE_KEY) !== "done") {
       setVoiceGuideOpen(true);
       setVoiceStatus("玩法已了解，现在开启麦克风");
       setVoiceVisualState("requesting");
@@ -1681,51 +1691,10 @@ export function GameSessionScreen({
     window.setTimeout(() => announceTurn(sessionRef.current), 200);
   };
 
-  const enterTelevisionMode = async () => {
-    setTvMode(true);
-    const useNativeMirror = shouldUseNativeMirrorLayout(window.innerWidth, navigator.maxTouchPoints);
-    setDisplayStatus(useNativeMirror ? "iPhone 原生清晰电视布局已开启 · 请保持横屏" : "电视模式已开启 · 保持设备横屏");
-    setCastGuideOpen(false);
-    playUiSound("success");
-    if (!useNativeMirror && !document.fullscreenElement) {
-      try {
-        await document.documentElement.requestFullscreen();
-      } catch {
-        setDisplayStatus("电视大字布局已开启，可从浏览器菜单手动全屏");
-      }
-    }
-    if (sessionRef.current.voiceEnabled && turnPhaseRef.current === "ready") {
-      window.setTimeout(() => announceTurn(sessionRef.current), 220);
-    }
-  };
-
-  const openCastGuide = () => {
-    stopVoiceListening();
-    window.speechSynthesis?.cancel();
-    setDisplayStatus("请让投屏设备和电视连接同一个 Wi-Fi");
-    setCastGuideOpen(true);
-  };
-
-  useEffect(() => {
-    if (!tvMode || !shouldUseNativeMirrorLayout(window.innerWidth, navigator.maxTouchPoints)) return;
-    const applyNativeMirrorLayout = () => {
-      document.documentElement.classList.add("tv-native-mirror");
-      window.scrollTo(0, 0);
-    };
-    applyNativeMirrorLayout();
-    window.addEventListener("orientationchange", applyNativeMirrorLayout);
-    return () => {
-      window.removeEventListener("orientationchange", applyNativeMirrorLayout);
-      document.documentElement.classList.remove("tv-native-mirror");
-      window.scrollTo(0, 0);
-    };
-  }, [tvMode]);
-
   useEffect(() => {
     const handleKeyboard = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         if (rulesOpen) closeRules();
-        else if (castGuideOpen) closeCastGuide();
         return;
       }
       if ((event.key === "?" || (event.key === "/" && event.shiftKey)) && !onboardingOpen) {
@@ -1737,7 +1706,7 @@ export function GameSessionScreen({
     return () => window.removeEventListener("keydown", handleKeyboard);
     // Handlers intentionally track the currently open help overlay.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rulesOpen, castGuideOpen, voiceGuideOpen, onboardingOpen]);
+  }, [rulesOpen, voiceGuideOpen, onboardingOpen]);
 
   const openSettlement = () => {
     if (turnPhaseRef.current !== "ready") skipTurnAnimation();
@@ -1815,7 +1784,7 @@ export function GameSessionScreen({
 
   return (
     <div className="live-game-stage" style={{ "--live-game-scale": liveGameScale } as React.CSSProperties}>
-    <main className={`game-shell${tvMode ? " tv-mode" : ""}`} style={{ "--active-color": currentColor } as React.CSSProperties}>
+    <main className={`game-shell${effectiveTvMode ? " tv-mode" : ""}`} style={{ "--active-color": currentColor } as React.CSSProperties}>
       <header className="game-topbar">
         <a className="brand game-brand" href="#game-top" aria-label="环球大富翁对局首页">
           <span className="brand-mark" aria-hidden="true">🌍</span>
@@ -1839,7 +1808,7 @@ export function GameSessionScreen({
           <button className={effectsEnabled ? "game-icon-action active" : "game-icon-action"} type="button" onClick={() => onEffectsChange(!effectsEnabled)} aria-label={effectsEnabled ? "关闭游戏音效" : "打开游戏音效"} aria-pressed={effectsEnabled} title={effectsEnabled ? "关闭游戏音效" : "打开游戏音效"}>{effectsEnabled ? "🔔" : "🔕"}</button>
           <button className={session.voiceEnabled ? "game-icon-action active" : "game-icon-action"} type="button" onClick={() => updateVoiceEnabled(!session.voiceEnabled)} aria-label={session.voiceEnabled ? "关闭语音主持" : "打开语音主持"} aria-pressed={session.voiceEnabled} title={session.voiceEnabled ? "关闭语音主持" : "打开语音主持"}>{session.voiceEnabled ? "🎙️" : "🚫"}</button>
           <button className={isFullscreen ? "game-icon-action active" : "game-icon-action"} type="button" onClick={toggleFullscreen} aria-label={isFullscreen ? "退出全屏" : "进入全屏"} aria-pressed={isFullscreen} title={isFullscreen ? "退出全屏" : "进入电视全屏"}>{isFullscreen ? "↙" : "⛶"}</button>
-          <button className="cast-button" type="button" onClick={openCastGuide}>📺 投到电视</button>
+          <button className="cast-button" type="button" onClick={onOpenRemoteController}>📱 iPhone 遥控</button>
           <button className="rules-button" type="button" onClick={() => openRules("quick")} aria-label="打开玩法规则手册" title="玩法规则手册，快捷键问号">📖 规则</button>
           <button className="game-text-action undo-action" type="button" disabled={!undoSnapshot} onClick={undoLastTransaction} title={undoSnapshot ? `撤销：${undoSnapshot.label}` : "暂无可撤销交易"}>↶ 撤销交易</button>
           <button className="game-text-action" type="button" onClick={() => { stopVoiceListening(); window.speechSynthesis?.cancel(); playUiSound("tap"); setDialog("new-game"); }}>重新开局</button>
@@ -1850,8 +1819,6 @@ export function GameSessionScreen({
       <section className="round-progress" aria-label={`当前第 ${session.round} 轮`}>
         <div style={{ width: gameLength.rounds ? `${completedProgress}%` : "100%" }} />
       </section>
-
-      {tvMode && <div className="tv-rotate-prompt" role="status"><span>↻</span><b>请把 iPhone 横过来</b><small>横屏后会使用原生清晰画面，并自动避开灵动岛和屏幕圆角。</small></div>}
 
       <section className="player-rail" aria-label="玩家资产概览">
         {session.players.map((player, index) => {
@@ -1901,7 +1868,7 @@ export function GameSessionScreen({
           </div>
           <button className="manage-assets-button" type="button" onClick={openAssetManager}>🏦 查看 / 管理我的资产</button>
           <div className={`voice-ready state-${voiceVisualState}`}><i>{voiceVisualState === "speaking" ? "📣" : session.voiceEnabled ? "🎙️" : "🔕"}</i><span><b>{voiceVisualState === "speaking" ? "主持人正在播报" : voiceVisualState === "listening" ? "麦克风正在倾听" : voiceVisualState === "heard" ? "已经收到你的回答" : currentPlayer.isChild ? "小小数学家模式" : session.voiceEnabled ? "语音主持已准备" : "语音主持已关闭"}</b><small>{recognizedTranscript ? `最近听到：“${recognizedTranscript}”` : session.voiceEnabled ? voiceStatus : "仍可使用大按钮操作"}</small></span><div className="voice-wave" aria-hidden="true"><em /><em /><em /><em /><em /></div><button type="button" onClick={() => { stopVoiceListening(); window.speechSynthesis?.cancel(); setVoiceGuideOpen(true); setVoiceStatus("可以检查或重新申请麦克风权限"); setVoiceVisualState("requesting"); }} aria-label="打开麦克风设置">设置</button></div>
-          {tvMode && <button className="tv-exit-button" type="button" onClick={() => setTvMode(false)}>退出电视布局</button>}
+          {effectiveTvMode && !televisionMode && <button className="tv-exit-button" type="button" onClick={() => setTvMode(false)}>退出电视布局</button>}
         </aside>
 
         <section className="board-stage" aria-live="polite">
@@ -2004,25 +1971,6 @@ export function GameSessionScreen({
             <div className={`voice-permission-preview state-${voiceVisualState}`}><span>{voiceVisualState === "error" ? "⚠️" : voiceVisualState === "unsupported" ? "🔕" : "🎙️"}</span><div><b>{voiceStatus}</b><small>{recognizedTranscript ? `最近识别：“${recognizedTranscript}”` : "语音只用于本机这一局的操作，不保存录音。"}</small></div><i className="voice-wave" aria-hidden="true"><em /><em /><em /><em /><em /></i></div>
             <div className="voice-guide-actions"><button type="button" onClick={closeVoiceGuide}>暂时不用 · 保留屏幕按钮</button><button type="button" onClick={enableMicrophoneFromGuide}>开启并测试麦克风 →</button></div>
             <footer>如果此前点了拒绝，请在浏览器地址栏旁的麦克风图标中改为允许，再重新测试。</footer>
-          </section>
-        </div>
-      )}
-
-      {castGuideOpen && (
-        <div className="modal-backdrop cast-guide-backdrop" role="presentation">
-          <section className="cast-guide-dialog" role="dialog" aria-modal="true" aria-labelledby="cast-guide-title">
-            <header><span>📺</span><div><small>IPHONE → ANDROID TV · 75 INCH</small><h2 id="cast-guide-title">把环球棋盘搬到客厅电视</h2><p>游戏留在手边设备上运行，电视只负责显示。iPhone 使用 AirPlay 屏幕镜像；没有 AirPlay 的安卓电视，可先安装 AirPlay 接收端。</p></div><button type="button" onClick={closeCastGuide} aria-label="关闭投屏说明">×</button></header>
-            <div className="cast-device-tabs" role="tablist" aria-label="选择投屏设备"><button className={castGuideDevice === "iphone" ? "active" : ""} type="button" role="tab" aria-selected={castGuideDevice === "iphone"} onClick={() => setCastGuideDevice("iphone")}>iPhone</button><button className={castGuideDevice === "android" ? "active" : ""} type="button" role="tab" aria-selected={castGuideDevice === "android"} onClick={() => setCastGuideDevice("android")}>安卓设备</button><button className={castGuideDevice === "computer" ? "active" : ""} type="button" role="tab" aria-selected={castGuideDevice === "computer"} onClick={() => setCastGuideDevice("computer")}>电脑</button></div>
-            {castGuideDevice === "iphone" ? (
-              <div className="cast-steps"><article><i>1</i><span><b>先确认电视能接收 AirPlay</b><small>电视设置里若有 Apple AirPlay 请开启；没有时，可在安卓电视应用商店安装 AirScreen 等接收端并打开。</small></span></article><article><i>2</i><span><b>打开 iPhone“屏幕镜像”</b><small>手机和电视连接同一 Wi-Fi，从右上角下拉控制中心，点两个重叠矩形的“屏幕镜像”。</small></span></article><article><i>3</i><span><b>开启清晰单屏布局并横屏</b><small>连接后点下方按钮，游戏会用手机原生像素呈现紧凑三栏棋盘，自动避开灵动岛，不再上下滑。</small></span></article></div>
-            ) : castGuideDevice === "android" ? (
-              <div className="cast-steps"><article><i>1</i><span><b>连接同一个 Wi-Fi</b><small>手机和平板与安卓电视必须在同一家庭网络。</small></span></article><article><i>2</i><span><b>打开系统“投屏 / 无线投屏”</b><small>从安卓快捷设置下拉面板进入；不同品牌也可能叫屏幕共享、Cast 或多屏互动。</small></span></article><article><i>3</i><span><b>选择客厅电视并保持横屏</b><small>连上后回到本页面，点击下方按钮进入电视大字与全屏布局。</small></span></article></div>
-            ) : (
-              <div className="cast-steps"><article><i>1</i><span><b>电脑与安卓电视连接同一 Wi-Fi</b><small>电视端打开无线显示、Chromecast 或投屏接收功能。</small></span></article><article><i>2</i><span><b>Chrome 右上角 ⋮ → 投放、保存和分享 → 投放</b><small>来源选择“投放标签页”；若要让电视直接出声，也可选择投放屏幕。</small></span></article><article><i>3</i><span><b>选择客厅电视</b><small>连接成功后，让游戏页面保持前台，再进入电视模式。</small></span></article></div>
-            )}
-            <div className="cast-checklist"><span>✓ 同一 Wi-Fi</span><span>✓ 电视开启接收</span><span>✓ iPhone 不锁屏</span><span>✓ 电视比例选自动 / 16:9</span></div>
-            <div className="cast-guide-actions"><button type="button" onClick={closeCastGuide}>稍后再投</button><button type="button" onClick={enterTelevisionMode}><small>连接电视后点击</small><b>切换为原生清晰单屏 →</b></button></div>
-            <footer>iPhone 横屏比 16:9 电视更宽，完整屏幕镜像出现上下黑边属于正常现象；电视端选择“填满/裁切”可去掉黑边，但会裁掉左右画面。语音仍使用 iPhone 麦克风。</footer>
           </section>
         </div>
       )}

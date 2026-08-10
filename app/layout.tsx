@@ -5,7 +5,7 @@ const publicBasePath = process.env.GITHUB_PAGES === "true" ? "/dafuweng" : "";
 
 export const metadata: Metadata = {
   title: "环球大富翁｜我们的家庭旅行局",
-  description: "适合家庭同屏和电视投屏的世界城市大富翁网页游戏。",
+  description: "适合手机、平板、电脑，以及电视独立显示加 iPhone 遥控的家庭大富翁网页游戏。",
   manifest: `${publicBasePath}/manifest.webmanifest`,
   applicationName: "环球大富翁",
   appleWebApp: {

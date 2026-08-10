@@ -1,4 +1,4 @@
-const CACHE_NAME = "family-world-tour-v1";
+const CACHE_NAME = "family-world-tour-v2";
 const APP_ROOT = new URL("./", self.registration.scope).pathname;
 const APP_SHELL = ["./", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"]
   .map((path) => new URL(path, self.registration.scope).pathname);

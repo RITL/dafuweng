@@ -9,6 +9,7 @@ import {
   PLAYER_COLORS,
 } from "./game/config";
 import { GameSessionScreen } from "./game/GameSessionScreen";
+import { RemoteControllerScreen, TelevisionRemoteHost } from "./game/RemotePlay";
 import {
   clearGameSession,
   createGameSession,
@@ -45,9 +46,18 @@ export default function Home() {
   const [freshSession, setFreshSession] = useState(false);
   const [homeRulesOpen, setHomeRulesOpen] = useState(false);
   const [iphoneGuideOpen, setIphoneGuideOpen] = useState(false);
+  const [controllerRoom, setControllerRoom] = useState<string | null>(null);
+  const [televisionMode, setTelevisionMode] = useState(false);
+  const [remotePairingOpen, setRemotePairingOpen] = useState(false);
   const { musicEnabled, effectsEnabled, audioStarted, setMusicEnabled, setEffectsEnabled, playUiSound } = useGameAudio();
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get("controller")?.replace(/\D/g, "") ?? "";
+    const isTelevision = params.get("tv") === "1";
+    setControllerRoom(/^\d{8}$/.test(room) ? room : null);
+    setTelevisionMode(isTelevision);
+    setRemotePairingOpen(isTelevision);
     setRestoreCandidate(loadGameSession());
     if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
       navigator.serviceWorker.register(new URL("sw.js", document.baseURI).pathname).catch(() => {
@@ -55,6 +65,22 @@ export default function Home() {
       });
     }
   }, []);
+
+  useEffect(() => {
+    const openPairing = () => setRemotePairingOpen(true);
+    window.addEventListener("open-tv-remote", openPairing);
+    return () => window.removeEventListener("open-tv-remote", openPairing);
+  }, []);
+
+  const enterTelevisionBrowserMode = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("controller");
+    url.searchParams.set("tv", "1");
+    window.history.replaceState({}, "", url);
+    setTelevisionMode(true);
+    setRemotePairingOpen(true);
+    playUiSound("success");
+  };
 
   const selectedEconomy = useMemo(
     () => ECONOMY_PRESETS.find((item) => item.id === economy) ?? ECONOMY_PRESETS[1],
@@ -95,7 +121,7 @@ export default function Home() {
   const startGame = async (event: FormEvent) => {
     event.preventDefault();
     playUiSound("success");
-    if (voiceEnabled && navigator.mediaDevices?.getUserMedia) {
+    if (!televisionMode && voiceEnabled && navigator.mediaDevices?.getUserMedia) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
@@ -127,24 +153,36 @@ export default function Home() {
     setFreshSession(false);
   };
 
+  if (controllerRoom) return <RemoteControllerScreen roomCode={controllerRoom} />;
+
   if (session) {
     return (
-      <GameSessionScreen
-        session={session}
-        isFresh={freshSession}
-        musicEnabled={musicEnabled}
-        effectsEnabled={effectsEnabled}
-        audioStarted={audioStarted}
-        onMusicChange={setMusicEnabled}
-        onEffectsChange={setEffectsEnabled}
-        playUiSound={playUiSound}
-        onSessionChange={updateSession}
-        onEndGame={endGame}
-      />
+      <>
+        <GameSessionScreen
+          session={session}
+          isFresh={freshSession}
+          musicEnabled={musicEnabled}
+          effectsEnabled={effectsEnabled}
+          audioStarted={audioStarted}
+          televisionMode={televisionMode}
+          remoteControlled={televisionMode}
+          onOpenRemoteController={() => {
+            if (televisionMode) setRemotePairingOpen(true);
+            else enterTelevisionBrowserMode();
+          }}
+          onMusicChange={setMusicEnabled}
+          onEffectsChange={setEffectsEnabled}
+          playUiSound={playUiSound}
+          onSessionChange={updateSession}
+          onEndGame={endGame}
+        />
+        <TelevisionRemoteHost enabled={televisionMode} pairingOpen={remotePairingOpen} onClosePairing={() => setRemotePairingOpen(false)} />
+      </>
     );
   }
 
   return (
+    <>
     <main className="app-shell">
       <div className="sky-decor sky-decor-one" aria-hidden="true">☁️</div>
       <div className="sky-decor sky-decor-two" aria-hidden="true">☁️</div>
@@ -175,6 +213,7 @@ export default function Home() {
             <i aria-hidden="true"><em /></i>
           </button>
           <button className="round-button" type="button" onClick={() => { playUiSound("tap"); setHomeRulesOpen(true); }}>玩法说明</button>
+          <button className="round-button television-entry-button" type="button" onClick={enterTelevisionBrowserMode}>📺 电视浏览器模式</button>
         </div>
       </header>
 
@@ -189,10 +228,10 @@ export default function Home() {
           <div className="hero-promise">
             <span>🎯 自动结算</span>
             <span>🎙️ 点名语音</span>
-            <span>📺 家庭投屏</span>
+            <span>📺 电视独立显示</span>
           </div>
-          <button className="iphone-install-button" type="button" onClick={() => { playUiSound("tap"); setIphoneGuideOpen(true); }}>
-            <span>📱</span><b>装到 iPhone，随时开局</b><small>不再需要背着电脑 · 支持 AirPlay 到安卓电视</small><i>查看方法 →</i>
+          <button className="iphone-install-button" type="button" onClick={enterTelevisionBrowserMode}>
+            <span>📺</span><b>电视直接打开，iPhone 遥控</b><small>不投屏 · 电视保持标准 16:9 · 手机负责操作和麦克风</small><i>进入电视模式 →</i>
           </button>
         </div>
 
@@ -434,9 +473,9 @@ export default function Home() {
               <article><i>2</i><span><b>分享 → 添加到主屏幕</b><small>在 Safari 底部点分享图标，再选“添加到主屏幕”，名称保留“环球大富翁”。</small></span></article>
               <article><i>3</i><span><b>像 App 一样随时点开</b><small>完成首次缓存后，即使临时断网也能打开；对局只保存在你的 iPhone，不上传家庭记录。</small></span></article>
             </div>
-            <div className="iphone-cast-note"><span>📺</span><p><b>投到安卓电视怎么办？</b><small>电视自带 AirPlay：直接用 iPhone 控制中心的“屏幕镜像”。电视没有 AirPlay：在电视应用商店安装 AirScreen 等 AirPlay 接收端，再从 iPhone 选择这台电视。</small></p></div>
+            <div className="iphone-cast-note"><span>📺</span><p><b>安卓电视不再使用屏幕镜像</b><small>电视浏览器直接打开游戏并进入“电视浏览器模式”，再用 iPhone 相机扫描电视二维码。电视负责 16:9 画面，iPhone 负责操作与麦克风。</small></p></div>
             <div className="iphone-guide-actions"><button type="button" onClick={() => setIphoneGuideOpen(false)}>我知道了</button><button type="button" onClick={() => { setIphoneGuideOpen(false); document.querySelector("#setup-title")?.scrollIntoView({ behavior: "smooth" }); }}>去设置玩家 · 准备开局 →</button></div>
-            <footer>投屏时 iPhone 继续负责麦克风和操作，请放在家人附近并保持横屏、不要锁屏。</footer>
+            <footer>iPhone、iPad 和 Mac 单独玩时不需要扫码；只有电视浏览器模式需要配对手机遥控器。</footer>
           </section>
         </div>
       )}
@@ -467,5 +506,7 @@ export default function Home() {
         </div>
       )}
     </main>
+    <TelevisionRemoteHost enabled={televisionMode} pairingOpen={remotePairingOpen} onClosePairing={() => setRemotePairingOpen(false)} />
+    </>
   );
 }

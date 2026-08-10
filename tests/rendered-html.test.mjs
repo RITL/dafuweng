@@ -23,7 +23,9 @@ test("服务端正确输出家庭版环球大富翁首页", async () => {
   assert.match(html, /今晚，我们去/);
   assert.match(html, /抽取先手 · 开始旅程/);
   assert.match(html, /玩法说明/);
-  assert.match(html, /装到 iPhone，随时开局/);
+  assert.match(html, /电视直接打开，iPhone 遥控/);
+  assert.match(html, /电视浏览器模式/);
+  assert.match(html, /不投屏/);
   assert.match(html, /manifest\.webmanifest/);
   assert.match(html, /apple-touch-icon\.png/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview|Building your site/i);
@@ -41,7 +43,7 @@ test("iPhone 主屏幕安装与离线外壳资源完整", async () => {
   assert.equal(parsed.display, "standalone");
   assert.equal(parsed.short_name, "环球大富翁");
   assert.equal(parsed.icons.length, 2);
-  assert.match(worker, /family-world-tour-v1/);
+  assert.match(worker, /family-world-tour-v2/);
   assert.match(worker, /request\.mode === "navigate"/);
   assert.match(worker, /caches\.match\(APP_ROOT\)/);
 });

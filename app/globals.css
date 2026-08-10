@@ -1231,3 +1231,84 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
 .live-game-stage .rank-person b { font-size: 18px; }
 .live-game-stage .ranking-table article strong { font-size: 19px; }
 .live-game-stage .settlement-actions button { min-height: 62px; font-size: 16px; }
+
+/* Television browser + iPhone remote control (no screen mirroring). */
+.remote-mode-loading { min-height: 100dvh; background: #163f42; }
+.remote-tv-mode :is(button,a,input,select):focus {
+  position: relative;
+  z-index: 160;
+  outline: 6px solid #ffe073 !important;
+  outline-offset: 5px;
+  box-shadow: 0 0 0 11px rgba(21,87,82,.48), 0 15px 35px rgba(0,0,0,.28) !important;
+  transform: scale(1.045);
+}
+.remote-pairing-backdrop {
+  position: fixed;
+  z-index: 300;
+  inset: 0;
+  padding: 32px;
+  display: grid;
+  place-items: center;
+  color: #173f3d;
+  background: radial-gradient(circle at 50% 18%,rgba(54,178,151,.3),transparent 31rem),rgba(5,31,37,.91);
+  backdrop-filter: blur(12px);
+}
+.remote-pairing-dialog {
+  width: min(980px,94vw);
+  max-height: 840px;
+  overflow: hidden;
+  border: 2px solid rgba(255,255,255,.8);
+  border-radius: 34px;
+  background: #fffdf5;
+  box-shadow: 0 45px 120px rgba(0,20,25,.62);
+}
+.remote-pairing-dialog > header { padding: 25px 30px; display: flex; align-items: center; gap: 19px; color: #fff; background: linear-gradient(135deg,#177d72,#123f49); }
+.remote-pairing-dialog > header > span { width: 78px; height: 78px; flex: 0 0 78px; display: grid; place-items: center; border-radius: 23px; background: rgba(255,255,255,.14); font-size: 43px; }
+.remote-pairing-dialog > header small { color: #a7e4d7; font-size: 14px; font-weight: 1000; letter-spacing: .08em; }
+.remote-pairing-dialog > header h2 { margin: 4px 0; font-size: 36px; }
+.remote-pairing-dialog > header p { margin: 0; color: rgba(255,255,255,.72); font-size: 16px; }
+.remote-pairing-main { padding: 27px 34px; display: grid; grid-template-columns: 306px minmax(0,1fr); align-items: center; gap: 38px; }
+.remote-qr { width: 286px; height: 286px; display: grid; place-items: center; border: 3px solid #d9e9df; border-radius: 26px; background: #fff; box-shadow: 0 15px 34px rgba(21,75,67,.13); }
+.remote-pairing-copy { min-width: 0; }
+.remote-link-state { display: inline-flex; align-items: center; gap: 9px; padding: 8px 13px; border-radius: 999px; color: #74530b; background: #fff0b8; font-size: 15px; font-weight: 1000; }
+.remote-link-state i,.remote-tv-badge i,.iphone-remote-header > i { width: 11px; height: 11px; display: block; border-radius: 50%; background: #d59b22; box-shadow: 0 0 0 5px rgba(213,155,34,.13); }
+.remote-link-state.state-connected { color: #176a55; background: #e0f6ec; }.remote-link-state.state-connected i,.remote-tv-badge.state-connected i,.iphone-remote-header > i.state-connected { background: #28aa78; }
+.remote-link-state.state-error { color: #98483a; background: #ffe6dd; }.remote-link-state.state-error i,.iphone-remote-header > i.state-error { background: #e16e59; }
+.remote-pairing-copy > small { margin-top: 17px; display: block; color: #758882; font-size: 14px; }
+.remote-pairing-copy > b { margin: 7px 0 17px; display: block; color: #164b48; font-size: 50px; letter-spacing: .12em; }
+.remote-pairing-copy ol { margin: 0; padding-left: 27px; color: #4d6661; font-size: 17px; font-weight: 800; line-height: 1.9; }
+.remote-pairing-dialog > footer { padding: 17px 30px; display: flex; align-items: center; justify-content: space-between; gap: 16px; color: #d9eee8; background: #204f4d; font-size: 14px; }
+.remote-pairing-dialog > footer button { min-height: 54px; padding: 0 21px; border: 0; border-radius: 15px; color: #563d08; background: #ffdb72; cursor: pointer; font-size: 15px; font-weight: 1000; }
+.remote-tv-badge { position: fixed; z-index: 260; right: 22px; bottom: 22px; min-height: 52px; padding: 0 18px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,.5); border-radius: 999px; color: #fff; background: rgba(16,68,66,.92); box-shadow: 0 12px 30px rgba(0,25,28,.35); cursor: pointer; font-size: 15px; font-weight: 1000; }
+
+.iphone-remote-shell {
+  min-height: 100dvh;
+  padding: max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));
+  overflow-x: hidden;
+  color: #173f3d;
+  background: radial-gradient(circle at 50% 0,#e8fff6,transparent 25rem),linear-gradient(165deg,#dcefe8,#fff8df 60%,#f3e4bf);
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.iphone-remote-header { min-height: 64px; padding: 10px 12px; display: grid; grid-template-columns: 46px minmax(0,1fr) 16px; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,.75); border-radius: 20px; background: rgba(255,255,255,.72); box-shadow: 0 10px 27px rgba(37,85,75,.1); backdrop-filter: blur(16px); }
+.iphone-remote-header > span { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 15px; background: #dff4ec; font-size: 27px; }
+.iphone-remote-header small,.iphone-remote-header b { display: block; }.iphone-remote-header small { color: #6d837d; font-size: 11px; }.iphone-remote-header b { margin-top: 3px; font-size: 16px; }
+.iphone-remote-now { min-height: 123px; margin-top: 11px; padding: 19px; display: grid; place-content: center; border-radius: 22px; color: #fff; background: linear-gradient(135deg,#176f69,#123f49); box-shadow: 0 13px 31px rgba(17,75,70,.2); text-align: center; }
+.iphone-remote-now small { color: #aee5d7; font-size: 12px; font-weight: 1000; }.iphone-remote-now h1 { margin: 5px 0; font-size: clamp(23px,7vw,31px); line-height: 1.15; }.iphone-remote-now p { margin: 0; color: rgba(255,255,255,.7); font-size: 12px; }
+.iphone-remote-primary { width: 100%; min-height: 76px; margin-top: 11px; padding: 10px 19px; display: flex; align-items: center; justify-content: space-between; border: 0; border-radius: 21px; color: #4f3908; background: linear-gradient(135deg,#ffe28a,#ffc858); box-shadow: 0 12px 27px rgba(176,119,14,.21); text-align: left; }
+.iphone-remote-primary span,.iphone-remote-primary b { display: block; }.iphone-remote-primary span { font-size: 12px; }.iphone-remote-primary b { font-size: 20px; }
+.iphone-remote-intents { margin-top: 10px; display: grid; grid-template-columns: repeat(4,1fr); gap: 7px; }.iphone-remote-intents button { min-width: 0; min-height: 58px; padding: 6px 3px; border: 1px solid #d8e4dc; border-radius: 16px; color: #28504b; background: rgba(255,255,255,.83); font-size: 13px; font-weight: 1000; }
+.iphone-remote-navigation { width: 252px; height: 188px; margin: 12px auto 0; display: grid; grid-template: repeat(3,1fr)/repeat(3,1fr); gap: 6px; }.iphone-remote-navigation button { border: 1px solid #ccddd4; border-radius: 18px; color: #28514c; background: rgba(255,255,255,.88); box-shadow: 0 6px 14px rgba(24,78,69,.09); font-size: 22px; font-weight: 1000; }.iphone-remote-navigation .up { grid-area: 1/2; }.iphone-remote-navigation .left { grid-area: 2/1; }.iphone-remote-navigation .ok { grid-area: 2/2; color: #fff; background: #187d70; font-size: 15px; }.iphone-remote-navigation .right { grid-area: 2/3; }.iphone-remote-navigation .down { grid-area: 3/2; }
+.iphone-remote-secondary { margin-top: 7px; display: grid; grid-template-columns: .8fr 1.4fr; gap: 8px; }.iphone-remote-secondary button { min-height: 57px; border: 1px solid #d5e1da; border-radius: 17px; color: #355953; background: rgba(255,255,255,.78); font-size: 14px; font-weight: 1000; }.iphone-remote-secondary .iphone-voice-button { color: #fff; border: 0; background: linear-gradient(135deg,#8a67cc,#654a9f); }
+.iphone-voice-status { min-height: 36px; margin: 7px 3px 0; color: #677d77; font-size: 11px; line-height: 1.5; text-align: center; }
+.iphone-answer-drawer { margin-top: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,.75); border-radius: 18px; background: rgba(255,255,255,.65); }.iphone-answer-drawer summary { padding: 15px 17px; cursor: pointer; font-size: 14px; font-weight: 1000; }.iphone-answer-drawer > div { padding: 0 10px 12px; display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; }.iphone-answer-drawer button { min-height: 45px; border: 1px solid #d6e1db; border-radius: 12px; color: #28514c; background: #fff; font-size: 16px; font-weight: 1000; }
+.iphone-remote-actions { margin-top: 9px; padding: 12px; border-radius: 17px; background: rgba(255,255,255,.56); }.iphone-remote-actions > small { color: #758781; font-size: 10px; }.iphone-remote-actions > div { margin-top: 7px; display: flex; gap: 6px; overflow-x: auto; }.iphone-remote-actions button { min-width: 105px; min-height: 42px; padding: 5px 9px; border: 1px solid #d7e2dc; border-radius: 12px; background: #fff; font-size: 11px; font-weight: 900; }
+.iphone-remote-shell > footer { padding: 14px 5px 2px; color: #74847f; font-size: 10px; line-height: 1.5; text-align: center; }
+.iphone-remote-shell button:active { transform: scale(.96); filter: brightness(.96); }
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .iphone-remote-shell { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 12px; }
+  .iphone-remote-header,.iphone-remote-now,.iphone-remote-primary,.iphone-remote-intents,.iphone-remote-secondary,.iphone-voice-status,.iphone-answer-drawer,.iphone-remote-actions,.iphone-remote-shell > footer { margin-top: 0; }
+  .iphone-remote-navigation { margin-top: 0; }
+}
