@@ -57,7 +57,9 @@ interface SpeechRecognitionLike {
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 const ROOM_STORAGE_KEY = "family-world-tour-tv-room";
+const AUTO_VOICE_STORAGE_KEY = "family-world-tour-remote-auto-voice";
 const PEER_PREFIX = "dafuweng-tv-";
+const REMOTE_ANSWER_EVENT = "family-world-tour-remote-answer";
 
 function createRoomCode() {
   const values = new Uint32Array(1);
@@ -179,7 +181,9 @@ function handleRemoteCommand(command: RemoteCommand) {
     else focusPrimaryAction();
   } else if (command.type === "primary") focusPrimaryAction();
   else if (command.type === "back") window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-  else if (command.type === "answer") clickButtonByText(new RegExp(`^${command.value}$`));
+  else if (command.type === "answer") {
+    window.dispatchEvent(new CustomEvent(REMOTE_ANSWER_EVENT, { detail: command.value }));
+  }
   else if (command.type === "intent") runIntent(command.value);
   else if (command.type === "voice") handleVoiceTranscript(command.transcript);
 }
@@ -326,8 +330,17 @@ export function RemoteControllerScreen({ roomCode }: RemoteControllerScreenProps
   const [status, setStatus] = useState<"connecting" | "connected" | "reconnecting" | "error">("connecting");
   const [uiState, setUiState] = useState<RemoteUiState>({ type: "state", activePlayer: "", title: "等待电视画面", detail: "", actions: [] });
   const [voiceStatus, setVoiceStatus] = useState("点麦克风后说：继续、购买、升级或数字答案");
+  const [autoVoice, setAutoVoice] = useState(() => typeof window !== "undefined" && window.localStorage.getItem(AUTO_VOICE_STORAGE_KEY) === "on");
   const connectionRef = useRef<DataConnection | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const autoVoiceRef = useRef(autoVoice);
+  const voiceRestartTimerRef = useRef<number | null>(null);
+  const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
+
+  const clearVoiceRestart = () => {
+    if (voiceRestartTimerRef.current !== null) window.clearTimeout(voiceRestartTimerRef.current);
+    voiceRestartTimerRef.current = null;
+  };
 
   useEffect(() => {
     let disposed = false;
@@ -364,7 +377,10 @@ export function RemoteControllerScreen({ roomCode }: RemoteControllerScreenProps
     return () => {
       disposed = true;
       if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
+      clearVoiceRestart();
+      autoVoiceRef.current = false;
       recognitionRef.current?.abort();
+      wakeLockRef.current?.release().catch(() => undefined);
       connectionRef.current?.close();
       peer?.destroy();
     };
@@ -378,17 +394,28 @@ export function RemoteControllerScreen({ roomCode }: RemoteControllerScreenProps
     connectionRef.current.send(command);
   };
 
-  const startVoice = () => {
+  const requestWakeLock = async () => {
+    const navigatorWithWakeLock = navigator as Navigator & { wakeLock?: { request: (type: "screen") => Promise<{ release: () => Promise<void> }> } };
+    if (!navigatorWithWakeLock.wakeLock || document.visibilityState !== "visible") return;
+    try {
+      wakeLockRef.current = await navigatorWithWakeLock.wakeLock.request("screen");
+    } catch {
+      // iOS may decline wake lock in low-power mode; voice remains usable.
+    }
+  };
+
+  const startVoice = (automatic = autoVoiceRef.current) => {
     const browserWindow = window as typeof window & { SpeechRecognition?: SpeechRecognitionConstructor; webkitSpeechRecognition?: SpeechRecognitionConstructor };
     const Recognition = browserWindow.SpeechRecognition ?? browserWindow.webkitSpeechRecognition;
     if (!Recognition) {
       setVoiceStatus("当前 Safari 不支持网页语音识别，请使用下方按钮和数字键盘");
       return;
     }
+    clearVoiceRestart();
     recognitionRef.current?.abort();
     const recognition = new Recognition();
     recognition.lang = "zh-CN";
-    recognition.continuous = false;
+    recognition.continuous = automatic;
     recognition.interimResults = false;
     recognition.maxAlternatives = 3;
     recognition.onresult = (event) => {
@@ -398,11 +425,61 @@ export function RemoteControllerScreen({ roomCode }: RemoteControllerScreenProps
       setVoiceStatus(`听到：“${transcript}”`);
       send({ type: "voice", transcript });
     };
-    recognition.onerror = (event) => setVoiceStatus(event.error === "not-allowed" ? "请在 Safari 地址栏设置中允许麦克风" : "没有听清，请再说一次");
-    recognition.onend = () => { recognitionRef.current = null; };
+    recognition.onerror = (event) => {
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        autoVoiceRef.current = false;
+        setAutoVoice(false);
+        window.localStorage.setItem(AUTO_VOICE_STORAGE_KEY, "off");
+        setVoiceStatus("请在 Safari 地址栏设置中允许麦克风");
+      } else {
+        setVoiceStatus(automatic ? "倾听短暂中断，正在自动恢复…" : "没有听清，请再说一次");
+      }
+    };
+    recognition.onend = () => {
+      if (recognitionRef.current === recognition) recognitionRef.current = null;
+      if (automatic && autoVoiceRef.current) {
+        clearVoiceRestart();
+        voiceRestartTimerRef.current = window.setTimeout(() => startVoice(true), 500);
+      }
+    };
     recognitionRef.current = recognition;
-    setVoiceStatus("正在听，请说出操作或数字…");
+    setVoiceStatus(automatic ? "自动倾听中，可以直接说操作或数字…" : "正在听，请说出操作或数字…");
     try { recognition.start(); } catch { setVoiceStatus("麦克风正在忙，请稍后再试"); }
+  };
+
+  const changeAutoVoice = (enabled: boolean) => {
+    autoVoiceRef.current = enabled;
+    setAutoVoice(enabled);
+    window.localStorage.setItem(AUTO_VOICE_STORAGE_KEY, enabled ? "on" : "off");
+    clearVoiceRestart();
+    if (enabled) {
+      setVoiceStatus("正在开启自动倾听…");
+      void requestWakeLock();
+      startVoice(true);
+    } else {
+      recognitionRef.current?.abort();
+      recognitionRef.current = null;
+      wakeLockRef.current?.release().catch(() => undefined);
+      wakeLockRef.current = null;
+      setVoiceStatus("自动倾听已关闭，需要时点“说话操作”");
+    }
+  };
+
+  useEffect(() => {
+    if (!autoVoice) return;
+    const resume = () => {
+      if (document.visibilityState !== "visible" || !autoVoiceRef.current) return;
+      void requestWakeLock();
+      if (!recognitionRef.current) startVoice(true);
+    };
+    document.addEventListener("visibilitychange", resume);
+    resume();
+    return () => document.removeEventListener("visibilitychange", resume);
+  }, [autoVoice]);
+
+  const sendAnswer = (value: number) => {
+    send({ type: "answer", value });
+    setVoiceStatus(`已把答案 ${value} 发送到电视`);
   };
 
   return (
@@ -412,9 +489,14 @@ export function RemoteControllerScreen({ roomCode }: RemoteControllerScreenProps
       <button className="iphone-remote-primary" type="button" onClick={() => send({ type: "primary" })}><span>当前主要操作</span><b>开始 / 继续 / 确认</b></button>
       <section className="iphone-remote-intents" aria-label="常用游戏操作"><button type="button" onClick={() => send({ type: "intent", value: "purchase" })}>🏙️ 购买</button><button type="button" onClick={() => send({ type: "intent", value: "upgrade" })}>🏠 升级</button><button type="button" onClick={() => send({ type: "intent", value: "assets" })}>💰 资产</button><button type="button" onClick={() => send({ type: "intent", value: "giveup" })}>↪ 放弃</button></section>
       <section className="iphone-remote-navigation" aria-label="电视遥控方向键"><button className="up" type="button" onClick={() => send({ type: "navigate", direction: "up" })}>▲</button><button className="left" type="button" onClick={() => send({ type: "navigate", direction: "left" })}>◀</button><button className="ok" type="button" onClick={() => send({ type: "activate" })}>确定</button><button className="right" type="button" onClick={() => send({ type: "navigate", direction: "right" })}>▶</button><button className="down" type="button" onClick={() => send({ type: "navigate", direction: "down" })}>▼</button></section>
-      <div className="iphone-remote-secondary"><button type="button" onClick={() => send({ type: "back" })}>← 返回</button><button className="iphone-voice-button" type="button" onClick={startVoice}>🎙️ 说话操作</button></div>
+      <div className="iphone-remote-secondary"><button type="button" onClick={() => send({ type: "back" })}>← 返回</button><button className="iphone-voice-button" type="button" onClick={() => startVoice(autoVoiceRef.current)}>🎙️ {autoVoice ? "重新倾听" : "说话操作"}</button></div>
+      <label className={autoVoice ? "iphone-auto-voice active" : "iphone-auto-voice"}>
+        <span><b>🎧 自动倾听</b><small>{autoVoice ? "手机放在桌上即可，识别结束会自动继续" : "关闭时，每次需要手动点“说话操作”"}</small></span>
+        <input type="checkbox" checked={autoVoice} onChange={(event) => changeAutoVoice(event.target.checked)} />
+        <i aria-hidden="true" />
+      </label>
       <p className="iphone-voice-status">{voiceStatus}</p>
-      <details className="iphone-answer-drawer"><summary>数字答案 0–24</summary><div>{Array.from({ length: 25 }, (_, value) => <button type="button" key={value} onClick={() => send({ type: "answer", value })}>{value}</button>)}</div></details>
+      <details className="iphone-answer-drawer"><summary>数字答案 0–24</summary><div>{Array.from({ length: 25 }, (_, value) => <button type="button" key={value} onClick={() => sendAnswer(value)}>{value}</button>)}</div></details>
       {uiState.actions.length > 0 && <section className="iphone-remote-actions"><small>电视当前可执行</small><div>{uiState.actions.map((action, index) => <button type="button" key={`${action}-${index}`} onClick={() => send({ type: "voice", transcript: action })}>{action}</button>)}</div></section>}
       <footer>房间 {roomCode.slice(0, 4)} {roomCode.slice(4)} · 电视与 iPhone 不传输画面，只同步操作</footer>
     </main>

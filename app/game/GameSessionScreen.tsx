@@ -75,6 +75,7 @@ const REDUCED_MOTION_KEY = "family-world-tour-reduced-motion";
 const VOICE_WAIT_REMINDER_MS = 15000;
 const VOICE_GUIDE_KEY = "family-world-tour-voice-guide-v1";
 const ONBOARDING_KEY = "family-world-tour-onboarding-v1";
+const REMOTE_ANSWER_EVENT = "family-world-tour-remote-answer";
 
 type VoiceVisualState = "idle" | "requesting" | "speaking" | "listening" | "heard" | "error" | "unsupported" | "off";
 
@@ -549,6 +550,7 @@ export function GameSessionScreen({
   const movedSessionRef = useRef<GameSession | null>(null);
   const handoffSessionRef = useRef<GameSession | null>(null);
   const answerLockedRef = useRef(false);
+  const submitMathAnswerRef = useRef<(answer: number) => void>(() => undefined);
   const sessionRef = useRef(session);
   const landingDecisionRef = useRef<LandingDecision | null>(null);
   const financialActionRef = useRef<FinancialAction | null>(null);
@@ -1301,6 +1303,19 @@ export function GameSessionScreen({
     if (originSession.voiceEnabled) speak(`答对啦！${roll.first}加${roll.second}等于${roll.total}，出发！`, () => beginMovement(originSession, roll.total));
     else beginMovement(originSession, roll.total);
   };
+  submitMathAnswerRef.current = submitMathAnswer;
+
+  useEffect(() => {
+    if (!remoteControlled) return;
+    const receiveRemoteAnswer = (event: Event) => {
+      const answer = (event as CustomEvent<unknown>).detail;
+      if (typeof answer === "number" && Number.isInteger(answer) && answer >= 0 && answer <= 24) {
+        submitMathAnswerRef.current(answer);
+      }
+    };
+    window.addEventListener(REMOTE_ANSWER_EVENT, receiveRemoteAnswer);
+    return () => window.removeEventListener(REMOTE_ANSWER_EVENT, receiveRemoteAnswer);
+  }, [remoteControlled]);
 
   const retryMathListening = async () => {
     const roll = pendingRollRef.current;
