@@ -309,7 +309,7 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
 .asset-total { padding: 15px 8px; border-radius: 17px; color: #fff; background: linear-gradient(135deg, var(--active-color), color-mix(in srgb, var(--active-color) 70%, #123f46)); }
 .asset-total small, .asset-total strong { display: block; }.asset-total small { font-size: 8px; opacity: .8; }.asset-total strong { margin-top: 3px; font-size: 24px; }
 .asset-mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }.asset-mini-grid span { padding: 10px 5px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }.asset-mini-grid span:last-child { grid-column: 1 / -1; }.asset-mini-grid small, .asset-mini-grid b { display: block; }.asset-mini-grid small { color: var(--muted); font-size: 7px; }.asset-mini-grid b { margin-top: 3px; font-size: 10px; }
-.voice-ready { margin-top: 12px; padding: 10px; display: flex; align-items: center; gap: 8px; text-align: left; border: 1px solid transparent; border-radius: 13px; background: #fff6dc; transition: border-color .2s ease, background .2s ease; }.voice-ready > i { flex: 0 0 auto; font-style: normal; font-size: 22px; }.voice-ready > span { min-width: 0; flex: 1; }.voice-ready b, .voice-ready small { display: block; }.voice-ready b { font-size: 9px; }.voice-ready small { margin-top: 3px; overflow: hidden; color: #8d7754; font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }.voice-ready > button { flex: 0 0 auto; padding: 4px 6px; color: #486761; border: 1px solid rgba(52,91,82,.15); border-radius: 7px; background: rgba(255,255,255,.62); cursor: pointer; font-size: 6px; font-weight: 900; }.voice-ready.state-listening { border-color: #72c9b1; background: #e9f9f3; }.voice-ready.state-speaking { border-color: #f0cd6a; background: #fff4cf; }.voice-ready.state-heard { border-color: #77c799; background: #eaf8ec; }.voice-ready.state-error, .voice-ready.state-unsupported { border-color: #ecaa92; background: #fff0e9; }
+.voice-ready { margin-top: 12px; padding: 10px; display: flex; align-items: center; gap: 8px; text-align: left; border: 1px solid transparent; border-radius: 13px; background: #fff6dc; transition: border-color .2s ease, background .2s ease; }.voice-ready > i { flex: 0 0 auto; font-style: normal; font-size: 22px; }.voice-ready > span { min-width: 0; flex: 1; }.voice-ready b, .voice-ready small { display: block; }.voice-ready b { font-size: 9px; }.voice-ready small { margin-top: 3px; overflow: hidden; color: #8d7754; font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }.voice-ready > button { flex: 0 0 auto; padding: 5px 7px; color: #fff; border: 0; border-radius: 7px; background: #16877d; cursor: pointer; font-size: 6px; font-weight: 900; }.voice-ready > button.microphone-on { background: #d85c4d; }.voice-ready.state-listening { border-color: #72c9b1; background: #e9f9f3; }.voice-ready.state-speaking { border-color: #f0cd6a; background: #fff4cf; }.voice-ready.state-heard { border-color: #77c799; background: #eaf8ec; }.voice-ready.state-error, .voice-ready.state-unsupported { border-color: #ecaa92; background: #fff0e9; }
 .voice-wave { height: 27px; display: flex; align-items: center; justify-content: center; gap: 2px; }.voice-wave em { width: 3px; height: 5px; display: block; border-radius: 999px; background: #9baca6; transform-origin: center; }.state-listening .voice-wave em { background: #1b9a7e; animation: voiceBar .72s ease-in-out infinite alternate; }.state-speaking .voice-wave em { background: #e0a52f; animation: voiceBar .55s ease-in-out infinite alternate; }.state-heard .voice-wave em { background: #47a76d; }.voice-wave em:nth-child(2) { animation-delay: -.3s; }.voice-wave em:nth-child(3) { animation-delay: -.55s; }.voice-wave em:nth-child(4) { animation-delay: -.18s; }.voice-wave em:nth-child(5) { animation-delay: -.44s; }
 .mini-voice-wave { height: 13px; margin-right: 5px; display: inline-flex; align-items: center; gap: 1px; vertical-align: middle; }.mini-voice-wave em { width: 2px; height: 4px; display: block; border-radius: 99px; background: #73918a; }.mini-voice-wave.state-listening em { background: #188a73; animation: voiceBar .72s ease-in-out infinite alternate; }.mini-voice-wave em:nth-child(2) { animation-delay: -.25s; }.mini-voice-wave em:nth-child(3) { animation-delay: -.5s; }.mini-voice-wave em:nth-child(4) { animation-delay: -.15s; }
 
@@ -1173,6 +1173,197 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
 .live-game-stage.proportional-large-stage .game-shell.tv-mode .control-deck {
   height: 828px;
 }
+
+/* Phone and small-tablet landscape home screen.
+ * Width-only breakpoints treat an 844×390 phone like a desktop. Use the short
+ * edge as the deciding constraint so the start screen stays compact and
+ * scrollable without changing the well-adapted live board. */
+@media (orientation: landscape) and (max-width: 1099px) and (max-height: 560px) {
+  .app-shell { min-height: 100dvh; overflow-x: hidden; }
+  .app-shell > .sky-decor { display: none; }
+  .app-shell > .topbar {
+    width: calc(100% - max(24px, env(safe-area-inset-left) + env(safe-area-inset-right) + 16px));
+    height: 54px;
+  }
+  .app-shell > .topbar .brand { gap: 8px; }
+  .app-shell > .topbar .brand-mark { width: 38px; height: 38px; border-radius: 12px; font-size: 22px; }
+  .app-shell > .topbar .brand strong { font-size: 14px; }
+  .app-shell > .topbar .brand small { display: none; }
+  .app-shell > .topbar .top-actions { gap: 6px; }
+  .app-shell > .topbar .status-pill,
+  .app-shell > .topbar .music-copy,
+  .app-shell > .topbar .music-button > i { display: none; }
+  .app-shell > .topbar .music-button { min-width: 38px; width: 38px; height: 38px; padding: 2px; }
+  .app-shell > .topbar .music-icon { width: 32px; height: 32px; }
+  .app-shell > .topbar .round-button { min-height: 38px; padding: 0 10px; font-size: 9px; }
+
+  .app-shell > .hero {
+    width: calc(100% - max(24px, env(safe-area-inset-left) + env(safe-area-inset-right) + 16px));
+    min-height: calc(100dvh - 54px);
+    margin: 0 auto;
+    grid-template-columns: minmax(0, 1.12fr) minmax(250px, .88fr);
+    gap: 14px;
+  }
+  .hero .eyebrow { font-size: 9px; }
+  .hero .eyebrow span { font-size: 13px; }
+  .hero h1 { margin: 8px 0; font-size: clamp(34px, 10dvh, 46px); line-height: 1; }
+  .hero h1 em::after { height: 5px; bottom: -4px; }
+  .hero-copy > p { margin: 15px 0 12px; font-size: 11px; line-height: 1.55; }
+  .hero-promise { gap: 5px; }
+  .hero-promise span { padding: 6px 8px; border-radius: 8px; font-size: 9px; }
+  .iphone-install-button { min-height: 50px; margin-top: 11px; padding: 6px 9px; grid-template-columns: 35px 1fr auto; gap: 1px 7px; border-radius: 13px; }
+  .iphone-install-button > span { width: 35px; height: 35px; border-radius: 10px; font-size: 21px; }
+  .iphone-install-button > b { font-size: 10px; }
+  .iphone-install-button > small { font-size: 7px; }
+  .iphone-install-button > i { font-size: 8px; }
+  .hero .travel-scene { min-height: 500px; zoom: .62; }
+
+  .app-shell > .setup-section {
+    width: calc(100% - max(24px, env(safe-area-inset-left) + env(safe-area-inset-right) + 16px));
+    margin-top: 10px;
+    padding: 18px;
+    border-radius: 22px;
+  }
+  .setup-section .section-heading { margin-bottom: 13px; align-items: center; gap: 18px; }
+  .setup-section .section-heading h2 { margin-top: 3px; font-size: 22px; }
+  .setup-section .section-heading p { max-width: 360px; font-size: 10px; line-height: 1.5; }
+  .setup-section .step-label { font-size: 8px; }
+  .setup-section .player-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .setup-section .player-card,
+  .setup-section .add-player { min-height: 176px; border-radius: 15px; }
+  .setup-section .player-card { padding: 10px; }
+  .setup-section .remove-player { top: 6px; right: 6px; width: 22px; height: 22px; font-size: 14px; }
+  .setup-section .avatar-picker { width: 52px; height: 52px; margin: 5px auto; border-radius: 17px; }
+  .setup-section .avatar-face { font-size: 30px; }
+  .setup-section .avatar-edit { width: 19px; height: 19px; font-size: 8px; }
+  .setup-section .name-field span { margin-bottom: 3px; font-size: 8px; }
+  .setup-section .name-field input { padding: 5px 7px; font-size: 10px; }
+  .setup-section .color-row { margin-top: 6px; gap: 4px; }
+  .setup-section .color-dot { width: 13px; height: 13px; }
+  .setup-section .child-player-toggle { min-height: 26px; margin-top: 7px; }
+  .setup-section .child-player-toggle span { font-size: 12px; }
+  .setup-section .child-player-toggle b { font-size: 7px; }
+  .setup-section .settings-grid { margin-top: 10px; gap: 9px; }
+  .setup-section .setting-panel { padding: 10px; border-radius: 14px; }
+  .setup-section .setting-panel legend { font-size: 11px; }
+  .setup-section .option-list { gap: 5px; }
+  .setup-section .option-card { min-height: 42px; padding: 6px 8px 6px 34px; }
+  .setup-section .option-card .radio-mark { left: 11px; width: 14px; height: 14px; }
+  .setup-section .option-card strong { font-size: 10px; }
+  .setup-section .option-card small { font-size: 7px; }
+  .setup-section .option-card b { font-size: 9px; }
+  .setup-section .voice-switch { margin-top: 6px; padding: 7px 9px; }
+  .setup-section .voice-switch b { font-size: 9px; }
+  .setup-section .voice-switch small { font-size: 7px; }
+  .setup-section .settlement-note { margin-top: 10px; padding: 9px 11px; border-radius: 12px; }
+  .setup-section .settlement-icon { width: 34px; height: 34px; flex-basis: 34px; font-size: 18px; }
+  .setup-section .settlement-note strong { font-size: 10px; }
+  .setup-section .settlement-note p { font-size: 8px; }
+  .setup-section .primary-button { min-width: 280px; height: 48px; margin-top: 12px; border-radius: 14px; font-size: 11px; }
+  .setup-section .primary-button b { width: 34px; height: 34px; border-radius: 10px; }
+  .app-shell > .preview-section,
+  .app-shell > footer { display: none; }
+
+  .home-rules-backdrop,
+  .iphone-guide-backdrop { padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); overflow-y: auto; }
+  .home-rules-dialog,
+  .iphone-guide-dialog { max-height: calc(100dvh - 16px); }
+}
+
+/* Compact in-game overlays for the same short landscape viewport. Base dialog
+ * rules are preserved, but dense purchases stay two-column and all overlays
+ * are bounded by the visible height instead of overflowing off-screen. */
+@media (orientation: landscape) and (max-width: 1099px) and (max-height: 560px) {
+  .live-game-stage .modal-backdrop,
+  .live-game-stage .card-reveal-backdrop {
+    padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  }
+  .live-game-stage .modal-backdrop { overflow-y: auto; }
+
+  .live-game-stage .economy-dialog {
+    width: min(940px, calc(100vw - 20px));
+    max-height: calc(100dvh - 12px);
+    grid-template-columns: minmax(205px, 30%) minmax(0, 1fr);
+    border-radius: 18px;
+  }
+  .live-game-stage .economy-city-poster { min-height: 0; padding: 13px 15px; }
+  .live-game-stage .city-deed-top span { font-size: 7px; }
+  .live-game-stage .city-deed-top b { padding: 4px 7px; font-size: 7px; }
+  .live-game-stage .city-emblem { width: 78px; height: 78px; margin: 18px auto 6px; border-width: 4px; border-radius: 24px; }
+  .live-game-stage .city-emblem i { font-size: 44px; }
+  .live-game-stage .city-emblem span { width: 28px; height: 28px; font-size: 13px; }
+  .live-game-stage .economy-city-poster > small { font-size: 7px; }
+  .live-game-stage .economy-city-poster > h2 { margin-top: 3px; font-size: 26px; }
+  .live-game-stage .economy-city-poster > p { display: none; }
+  .live-game-stage .city-silhouette { font-size: 17px; }
+  .live-game-stage .city-owner-ribbon { left: 15px; right: 15px; bottom: 11px; padding: 7px; font-size: 7px; }
+  .live-game-stage .economy-deal-panel { padding: 12px 15px 9px; }
+  .live-game-stage .economy-dialog-header { padding-bottom: 7px; }
+  .live-game-stage .economy-dialog-header small { font-size: 7px; }
+  .live-game-stage .economy-dialog-header h3 { margin-top: 2px; font-size: 20px; }
+  .live-game-stage .economy-dialog-header > span { font-size: 19px; }
+  .live-game-stage .economy-dialog-header > span b { font-size: 7px; }
+  .live-game-stage .purchase-balance-preview { margin-top: 7px; padding: 6px 9px; }
+  .live-game-stage .purchase-balance-preview small { font-size: 7px; }
+  .live-game-stage .purchase-balance-preview b { font-size: 12px; }
+  .live-game-stage .purchase-balance-preview > i { font-size: 7px; }
+  .live-game-stage .economy-stat-row { margin-top: 6px; gap: 5px; }
+  .live-game-stage .economy-stat-row > span { padding: 6px 7px; }
+  .live-game-stage .economy-stat-row small { font-size: 7px; }
+  .live-game-stage .economy-stat-row b { font-size: 11px; }
+  .live-game-stage .rent-growth-board { margin-top: 6px; padding: 7px 8px; }
+  .live-game-stage .rent-growth-board > header span b { font-size: 9px; }
+  .live-game-stage .rent-growth-board > header span small,
+  .live-game-stage .rent-growth-board > header > em { font-size: 6px; }
+  .live-game-stage .rent-growth-board > div { margin-top: 5px; gap: 4px; grid-template-columns: repeat(6, 1fr); }
+  .live-game-stage .rent-growth-board article { min-height: 55px; padding: 3px; }
+  .live-game-stage .rent-growth-board article > span { min-height: 16px; font-size: 12px; }
+  .live-game-stage .rent-growth-board article:first-child > span,
+  .live-game-stage .rent-growth-board article.hotel-level > span { font-size: 15px; }
+  .live-game-stage .rent-growth-board article > small { font-size: 6px; }
+  .live-game-stage .rent-growth-board article > b { font-size: 8px; }
+  .live-game-stage .rent-growth-board article > em { display: none; }
+  .live-game-stage .city-investment-note,
+  .live-game-stage .cash-warning,
+  .live-game-stage .economy-voice-hint { margin-top: 5px; padding: 5px 8px; }
+  .live-game-stage .city-investment-note b,
+  .live-game-stage .cash-warning b,
+  .live-game-stage .economy-voice-hint span b { font-size: 7px; }
+  .live-game-stage .city-investment-note small,
+  .live-game-stage .cash-warning small,
+  .live-game-stage .economy-voice-hint span small { font-size: 6px; }
+  .live-game-stage .economy-actions { margin-top: 6px; gap: 5px; grid-template-columns: 1fr 1fr 1.6fr; }
+  .live-game-stage .economy-actions button { min-height: 38px; padding: 5px 7px; }
+  .live-game-stage .economy-actions button span { font-size: 6px; }
+  .live-game-stage .economy-actions button b { margin-top: 2px; font-size: 8px; }
+  .live-game-stage .economy-deal-panel > footer { margin-top: 5px; font-size: 6px; }
+
+  .live-game-stage .family-card-dialog { width: min(420px, 78vw); max-height: calc(100dvh - 12px); }
+  .live-game-stage .family-card-face { padding: 13px 20px 10px; border-width: 2px; border-radius: 21px; }
+  .live-game-stage .family-card-face > header { margin: -13px -20px 7px; padding: 7px 13px; }
+  .live-game-stage .family-card-face > header span { font-size: 7px; }
+  .live-game-stage .family-card-face > header b { font-size: 6px; }
+  .live-game-stage .family-card-face::before,
+  .live-game-stage .family-card-face::after { top: 55px; font-size: 12px; }
+  .live-game-stage .family-card-icon { width: 58px; height: 58px; margin-bottom: 4px; font-size: 34px; }
+  .live-game-stage .family-card-face > small { font-size: 6px; }
+  .live-game-stage .family-card-face h2 { margin: 3px 0 4px; font-size: 19px; }
+  .live-game-stage .family-card-face > p { font-size: 8px; line-height: 1.4; }
+  .live-game-stage .card-result { margin-top: 6px; padding: 6px 8px; gap: 7px; }
+  .live-game-stage .card-result > span { width: 27px; height: 27px; flex-basis: 27px; font-size: 13px; }
+  .live-game-stage .card-result div small { font-size: 6px; }
+  .live-game-stage .card-result div b { margin-top: 1px; font-size: 7px; }
+  .live-game-stage .card-safety-limits { margin-top: 4px; gap: 3px; }
+  .live-game-stage .card-safety-limits span { padding: 2px 4px; font-size: 5px; }
+  .live-game-stage .family-card-face > button { min-height: 36px; margin-top: 6px; padding: 4px 9px; border-radius: 10px; }
+  .live-game-stage .family-card-face > button span { font-size: 5px; }
+  .live-game-stage .family-card-face > button b { margin-top: 1px; font-size: 8px; }
+  .live-game-stage .family-card-face > footer { margin-top: 4px; font-size: 5px; }
+
+  .live-game-stage :is(.asset-manager, .rules-dialog, .onboarding-dialog, .voice-guide-dialog, .financial-confirm-dialog, .confirm-dialog) {
+    max-height: calc(100dvh - 12px);
+  }
+}
 .live-game-stage .game-shell.phase-answering .control-deck > .current-player-card,
 .live-game-stage .game-shell.phase-answering .control-deck > .journey-log {
   display: none !important;
@@ -1222,7 +1413,11 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
   grid-area: 2 / 2 / 10 / 24;
 }
 
-/* Live game overlays · sofa-readable typography within the 1600×900 stage. */
+/* Live game overlays · sofa-readable typography within the 1600×900 stage.
+ * Keep this enlargement on desktop/TV layouts only. The board has its own
+ * compact native layout below 1100px; applying these fixed 1600×900 overlay
+ * sizes there makes landscape phones render only the top-left of a dialog. */
+@media (min-width: 1100px) {
 .live-game-stage .modal-backdrop,
 .live-game-stage .card-reveal-backdrop { padding: 28px; }
 
@@ -1367,6 +1562,7 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
 .live-game-stage .rank-person b { font-size: 18px; }
 .live-game-stage .ranking-table article strong { font-size: 19px; }
 .live-game-stage .settlement-actions button { min-height: 62px; font-size: 16px; }
+}
 
 /* Television browser + iPhone remote control (no screen mirroring). */
 .remote-mode-loading { min-height: 100dvh; background: #163f42; }
@@ -1441,7 +1637,7 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
 .iphone-remote-primary span,.iphone-remote-primary b { display: block; }.iphone-remote-primary span { font-size: 12px; }.iphone-remote-primary b { font-size: 20px; }
 .iphone-remote-intents { margin-top: 10px; display: grid; grid-template-columns: repeat(4,1fr); gap: 7px; }.iphone-remote-intents button { min-width: 0; min-height: 58px; padding: 6px 3px; border: 1px solid #d8e4dc; border-radius: 16px; color: #28504b; background: rgba(255,255,255,.83); font-size: 13px; font-weight: 1000; }
 .iphone-remote-navigation { width: 252px; height: 188px; margin: 12px auto 0; display: grid; grid-template: repeat(3,1fr)/repeat(3,1fr); gap: 6px; }.iphone-remote-navigation button { border: 1px solid #ccddd4; border-radius: 18px; color: #28514c; background: rgba(255,255,255,.88); box-shadow: 0 6px 14px rgba(24,78,69,.09); font-size: 22px; font-weight: 1000; }.iphone-remote-navigation .up { grid-area: 1/2; }.iphone-remote-navigation .left { grid-area: 2/1; }.iphone-remote-navigation .ok { grid-area: 2/2; color: #fff; background: #187d70; font-size: 15px; }.iphone-remote-navigation .right { grid-area: 2/3; }.iphone-remote-navigation .down { grid-area: 3/2; }
-.iphone-remote-secondary { margin-top: 7px; display: grid; grid-template-columns: .8fr 1.4fr; gap: 8px; }.iphone-remote-secondary button { min-height: 57px; border: 1px solid #d5e1da; border-radius: 17px; color: #355953; background: rgba(255,255,255,.78); font-size: 14px; font-weight: 1000; }.iphone-remote-secondary .iphone-voice-button { color: #fff; border: 0; background: linear-gradient(135deg,#8a67cc,#654a9f); }
+.iphone-remote-secondary { margin-top: 7px; display: grid; grid-template-columns: .8fr 1.4fr; gap: 8px; }.iphone-remote-secondary button { min-height: 57px; border: 1px solid #d5e1da; border-radius: 17px; color: #355953; background: rgba(255,255,255,.78); font-size: 14px; font-weight: 1000; }.iphone-remote-secondary .iphone-voice-button { color: #fff; border: 0; background: linear-gradient(135deg,#16877d,#0e6662); }.iphone-remote-secondary .iphone-voice-button.microphone-on { background: linear-gradient(135deg,#ef745e,#c94f45); box-shadow:0 0 0 4px rgba(239,116,94,.14),0 10px 22px rgba(154,57,48,.18); }
 .iphone-auto-voice { margin-top: 8px; padding: 11px 13px; display: flex; align-items: center; gap: 12px; border: 1px solid #d8e4dc; border-radius: 17px; background: rgba(255,255,255,.76); cursor: pointer; }.iphone-auto-voice > span { min-width: 0; flex: 1; }.iphone-auto-voice b,.iphone-auto-voice small { display: block; }.iphone-auto-voice b { color: #315650; font-size: 13px; }.iphone-auto-voice small { margin-top: 3px; color: #74867f; font-size: 10px; line-height: 1.4; }.iphone-auto-voice input { position: absolute; opacity: 0; pointer-events: none; }.iphone-auto-voice > i { position: relative; width: 47px; height: 27px; flex: 0 0 47px; border-radius: 99px; background: #bdcbc5; transition: .2s ease; }.iphone-auto-voice > i::after { content: ""; position: absolute; left: 4px; top: 4px; width: 19px; height: 19px; border-radius: 50%; background: #fff; box-shadow: 0 2px 7px rgba(28,65,58,.24); transition: .2s ease; }.iphone-auto-voice.active { border-color: #9b86cf; background: #f4f0ff; }.iphone-auto-voice.active > i { background: #765ab2; }.iphone-auto-voice.active > i::after { transform: translateX(20px); }
 .iphone-voice-status { min-height: 36px; margin: 7px 3px 0; color: #677d77; font-size: 11px; line-height: 1.5; text-align: center; }
 .iphone-answer-drawer { margin-top: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,.75); border-radius: 18px; background: rgba(255,255,255,.65); }.iphone-answer-drawer summary { padding: 15px 17px; cursor: pointer; font-size: 14px; font-weight: 1000; }.iphone-answer-drawer > div { padding: 0 10px 12px; display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; }.iphone-answer-drawer button { min-height: 45px; border: 1px solid #d6e1db; border-radius: 12px; color: #28514c; background: #fff; font-size: 16px; font-weight: 1000; }

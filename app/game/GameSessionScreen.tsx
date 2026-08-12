@@ -612,6 +612,29 @@ export function GameSessionScreen({
     }
   };
 
+  useEffect(() => {
+    const releaseVoice = () => {
+      stopVoiceListening();
+      window.speechSynthesis?.cancel();
+      if (voiceReminderRef.current !== null) window.clearTimeout(voiceReminderRef.current);
+      voiceReminderRef.current = null;
+      setVoiceStatus("页面进入后台，麦克风已关闭");
+      setVoiceVisualState(sessionRef.current.voiceEnabled ? "idle" : "off");
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") releaseVoice();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("pagehide", releaseVoice);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("pagehide", releaseVoice);
+      releaseVoice();
+    };
+    // Voice resources are intentionally tied to the page lifetime.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const prepareMicrophone = async () => {
     if (remoteControlled) {
       setVoiceStatus("麦克风由已配对的 iPhone 遥控器提供");
@@ -675,6 +698,12 @@ export function GameSessionScreen({
   };
 
   const startVoiceListening = (mode: "start" | "answer", targetSession: GameSession, withCue = true) => {
+    if (document.visibilityState !== "visible") {
+      stopVoiceListening();
+      setVoiceStatus("页面在后台，麦克风保持关闭");
+      setVoiceVisualState("idle");
+      return;
+    }
     if (!targetSession.voiceEnabled) {
       setVoiceStatus("语音已关闭，可点击按钮");
       setVoiceVisualState("off");
@@ -703,6 +732,7 @@ export function GameSessionScreen({
       if (retryScheduled) return;
       retryScheduled = true;
       window.setTimeout(() => {
+        if (document.visibilityState !== "visible") return;
         if (mode === "answer" && turnPhaseRef.current === "answering" && !answerLockedRef.current && pendingRollRef.current) {
           startVoiceListening("answer", targetSession, false);
         } else if (mode === "start" && turnPhaseRef.current === "ready" && dialog === null) {
@@ -855,6 +885,12 @@ export function GameSessionScreen({
   };
 
   const startFinancialListening = (mode: "landing" | "confirm" | "assets", targetSession: GameSession, withCue = true) => {
+    if (document.visibilityState !== "visible") {
+      stopVoiceListening();
+      setVoiceStatus("页面在后台，麦克风保持关闭");
+      setVoiceVisualState("idle");
+      return;
+    }
     if (!targetSession.voiceEnabled) return;
     if (remoteControlled) {
       setVoiceStatus("请在 iPhone 遥控器选择或说出操作");
@@ -878,6 +914,7 @@ export function GameSessionScreen({
       if (retryScheduled) return;
       retryScheduled = true;
       window.setTimeout(() => {
+        if (document.visibilityState !== "visible") return;
         const canContinue = mode === "confirm"
           ? financialActionRef.current !== null
           : mode === "landing"
@@ -1906,7 +1943,7 @@ export function GameSessionScreen({
             <span><small>建筑投入</small><b>¥{numberFormatter.format(currentAssets.buildingOriginalValue)}</b></span>
           </div>
           <button className="manage-assets-button" type="button" onClick={openAssetManager}>🏦 查看 / 管理我的资产</button>
-          <div className={`voice-ready state-${voiceVisualState}`}><i>{voiceVisualState === "speaking" ? "📣" : session.voiceEnabled ? "🎙️" : "🔕"}</i><span><b>{voiceVisualState === "speaking" ? "主持人正在播报" : voiceVisualState === "listening" ? "麦克风正在倾听" : voiceVisualState === "heard" ? "已经收到你的回答" : currentPlayer.isChild ? "小小数学家模式" : session.voiceEnabled ? "语音主持已准备" : "语音主持已关闭"}</b><small>{recognizedTranscript ? `最近听到：“${recognizedTranscript}”` : session.voiceEnabled ? voiceStatus : "仍可使用大按钮操作"}</small></span><div className="voice-wave" aria-hidden="true"><em /><em /><em /><em /><em /></div><button type="button" onClick={() => { stopVoiceListening(); window.speechSynthesis?.cancel(); setVoiceGuideOpen(true); setVoiceStatus("可以检查或重新申请麦克风权限"); setVoiceVisualState("requesting"); }} aria-label="打开麦克风设置">设置</button></div>
+          <div className={`voice-ready state-${voiceVisualState}`}><i>{voiceVisualState === "speaking" ? "📣" : session.voiceEnabled ? "🎙️" : "🔕"}</i><span><b>{voiceVisualState === "speaking" ? "主持人正在播报" : voiceVisualState === "listening" ? "麦克风正在倾听" : voiceVisualState === "heard" ? "已经收到你的回答" : currentPlayer.isChild ? "小小数学家模式" : session.voiceEnabled ? "语音主持已准备" : "语音主持已关闭"}</b><small>{recognizedTranscript ? `最近听到：“${recognizedTranscript}”` : session.voiceEnabled ? voiceStatus : "仍可使用大按钮操作"}</small></span><div className="voice-wave" aria-hidden="true"><em /><em /><em /><em /><em /></div><button className={session.voiceEnabled ? "microphone-on" : ""} type="button" aria-pressed={session.voiceEnabled} onClick={() => updateVoiceEnabled(!session.voiceEnabled)}>{session.voiceEnabled ? "关闭麦克风" : "打开麦克风"}</button></div>
           {effectiveTvMode && !televisionMode && <button className="tv-exit-button" type="button" onClick={() => setTvMode(false)}>退出电视布局</button>}
         </aside>
 
