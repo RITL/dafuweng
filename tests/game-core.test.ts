@@ -4,8 +4,11 @@ import { afterEach, describe, test } from "node:test";
 import { drawAndResolveCard } from "../app/game/cards";
 import { BOARD_TILES, CHANCE_CARDS, DESTINY_CARDS, ECONOMY_PRESETS } from "../app/game/config";
 import {
+  applyAssetAction,
+  applyFamilyAid,
   calculateRent,
   purchaseCity,
+  quoteAssetAction,
   transferRent,
   upgradeCity,
 } from "../app/game/economy";
@@ -20,6 +23,7 @@ import {
 import { calculateAssetBreakdown, createSettlementRanking } from "../app/game/settlement";
 import { getClassicBoardGridArea, shouldUseNativeMirrorLayout } from "../app/game/display";
 import { parseSpokenNumber } from "../app/game/voice";
+import { ageBandForPlayer, challengesForAge, createLearningAwards, recordChallenge, shouldOfferChallenge } from "../app/game/learning";
 import type { FamilyCard, GameSession, PlayerState } from "../app/game/types";
 
 const colors = ["coral", "ocean", "sunny", "grape", "mint", "rose"] as const;
@@ -89,6 +93,18 @@ describe("双球轮盘与移动", () => {
     assert.match(moved.events[0].message, /前进 5 格/);
     assert.equal(moved.events.filter((event) => /经过环球起点/.test(event.message)).length, 1);
   });
+
+  test("实体轮盘边界 0 与 24 都能按单次点数移动", () => {
+    const session = makeSession();
+    const origin = activePlayer(session).position;
+    const zero = moveActivePlayer(session, 0);
+    assert.equal(activePlayer(zero).position, origin);
+    assert.match(zero.events[0].message, /前进 0 格/);
+
+    const twentyFour = moveActivePlayer(session, 24);
+    assert.equal(activePlayer(twentyFour).position, (origin + 24) % BOARD_TILES.length);
+    assert.match(twentyFour.events[0].message, /前进 24 格/);
+  });
 });
 
 describe("城市购买、升级与租金", () => {
@@ -129,6 +145,45 @@ describe("城市购买、升级与租金", () => {
     assert.equal(transfer.session.players[0].cash, ownerBefore + expectedRent);
     assert.equal(transfer.session.players[1].cash, payerBefore - expectedRent);
     assert.equal(transfer.session.events.filter((event) => /支付.*租金/.test(event.message)).length, 1);
+  });
+
+  test("地产收费强度可独立放大旅馆租金", () => {
+    let session = purchaseCity(makeSession(), city) as GameSession;
+    for (let level = 0; level < 5; level += 1) session = upgradeCity(session, city) as GameSession;
+    const property = session.players[0].properties[0];
+    const standardRent = calculateRent(session, city, property);
+    const tycoonRent = calculateRent({ ...session, rentDifficultyId: "tycoon" }, city, property);
+    assert.equal(tycoonRent, standardRent * 2);
+  });
+
+  test("家庭援助只补足租金并保留基本旅行金", () => {
+    const session = makeSession();
+    session.players[0] = { ...session.players[0], cash: 120 };
+    const aid = applyFamilyAid(session, 2_000);
+    assert.ok(aid);
+    const reliefFloor = ECONOMY_PRESETS[1].reliefFloor;
+    assert.equal(aid.session.players[0].cash, 2_000 + reliefFloor);
+    assert.equal(aid.amount, 2_000 + reliefFloor - 120);
+    assert.equal(applyFamilyAid(aid.session, 2_000), null);
+  });
+
+  test("资产管理可抵押、赎回，且抵押期间租金为零", () => {
+    let session = purchaseCity(makeSession(), city) as GameSession;
+    const property = activePlayer(session).properties[0];
+    const mortgage = quoteAssetAction(property, city, "mortgage");
+    assert.ok(mortgage);
+    const cashBefore = activePlayer(session).cash;
+    session = applyAssetAction(session, city.id, "mortgage") as GameSession;
+    assert.ok(session);
+    assert.equal(activePlayer(session).cash, cashBefore + mortgage.amount);
+    assert.equal(calculateRent(session, city, activePlayer(session).properties[0]), 0);
+
+    const redeem = quoteAssetAction(activePlayer(session).properties[0], city, "redeem");
+    assert.ok(redeem);
+    session = applyAssetAction(session, city.id, "redeem") as GameSession;
+    assert.ok(session);
+    assert.equal(activePlayer(session).properties[0].mortgaged, false);
+    assert.equal(activePlayer(session).cash, cashBefore + mortgage.amount - redeem.amount);
   });
 });
 
@@ -262,6 +317,43 @@ describe("小朋友数学语音答案", () => {
     assert.equal(parseSpokenNumber("0 加 8，答案是 8"), 8);
     assert.equal(parseSpokenNumber("零加八等于八"), 8);
     assert.equal(parseSpokenNumber("十二加十二等于二十四"), 24);
+  });
+});
+
+describe("趣味学习与旧玩家兼容", () => {
+  test("未设置年龄的小朋友沿用 6–8 岁，成人不触发题目", () => {
+    assert.equal(ageBandForPlayer(true), "6-8");
+    assert.equal(ageBandForPlayer(true, "4-6"), "4-6");
+    assert.equal(ageBandForPlayer(false, "4-6"), null);
+  });
+
+  test("挑战低频触发且避免连续相同类别", () => {
+    const session = makeSession(2);
+    session.round = 3;
+    session.currentPlayerIndex = 1;
+    assert.equal(shouldOfferChallenge(session), true);
+    const choices = challengesForAge("4-6", "math");
+    assert.ok(choices.every((challenge) => challenge.category !== "math"));
+  });
+
+  test("答错不改变现金，仍记录尝试和旅行印章", () => {
+    const session = makeSession(2);
+    session.currentPlayerIndex = 1;
+    const challenge = challengesForAge("4-6")[0];
+    const cashBefore = session.players[1].cash;
+    const next = recordChallenge(session, challenge, false);
+    assert.equal(next.players[1].cash, cashBefore);
+    assert.equal(next.learning?.players.p2.challengeAttempts, 1);
+    assert.equal(next.learning?.players.p2.stamps, 1);
+  });
+
+  test("学习奖项允许并列，不改变资产排行", () => {
+    const session = makeSession(2);
+    if (!session.learning) throw new Error("learning state missing");
+    session.learning.players.p1.visitedCityIds = ["beijing"];
+    session.learning.players.p2.visitedCityIds = ["tokyo"];
+    const award = createLearningAwards(session).find((item) => item.id === "explorer");
+    assert.deepEqual(award?.playerIds, ["p1", "p2"]);
   });
 });
 

@@ -1,12 +1,15 @@
 import { BOARD_TILES, ECONOMY_PRESETS } from "./config";
 import type {
+  ChildAgeBand,
   EconomyPresetId,
   GameEvent,
   GameLengthId,
   GameSession,
   PlayerColor,
   PlayerState,
+  RentDifficultyId,
 } from "./types";
+import { createLearningState, migrateLearningState } from "./learning";
 
 export const GAME_SESSION_STORAGE_KEY = "family-world-tour-session-v1";
 
@@ -16,6 +19,7 @@ export interface SessionPlayerDraft {
   avatar: string;
   color: PlayerColor;
   isChild?: boolean;
+  ageBand?: ChildAgeBand;
 }
 
 export interface RouletteResult {
@@ -71,6 +75,7 @@ export function createGameSession(
   economyId: EconomyPresetId,
   gameLengthId: GameLengthId,
   voiceEnabled: boolean,
+  rentDifficultyId: RentDifficultyId = "standard",
 ): GameSession {
   const economy = ECONOMY_PRESETS.find((item) => item.id === economyId) ?? ECONOMY_PRESETS[1];
   const players: PlayerState[] = drafts.map((draft, index) => ({
@@ -79,6 +84,7 @@ export function createGameSession(
     avatar: draft.avatar,
     color: draft.color,
     isChild: draft.isChild ?? false,
+    ageBand: draft.isChild ? draft.ageBand ?? "6-8" : undefined,
     cash: economy.startingCash,
     position: 0,
     lapsCompleted: 0,
@@ -97,10 +103,11 @@ export function createGameSession(
     createdAt: now,
   };
 
-  return {
+  const created: GameSession = {
     version: 1,
     id: makeId("game"),
     economyId,
+    rentDifficultyId,
     gameLengthId,
     voiceNarrationEnabled: voiceEnabled,
     voiceEnabled,
@@ -113,6 +120,8 @@ export function createGameSession(
     events: [startEvent],
     cardDecks: createCardDeckState(),
   };
+  created.learning = createLearningState(players.map((player) => player.id));
+  return created;
 }
 
 export function advanceGameTurn(session: GameSession): GameSession {
@@ -218,12 +227,14 @@ export function loadGameSession(): GameSession | null {
     ) {
       return null;
     }
-    return {
+    const migrated = {
       ...parsed,
+      rentDifficultyId: parsed.rentDifficultyId ?? "standard",
       voiceNarrationEnabled: parsed.voiceNarrationEnabled ?? parsed.voiceEnabled,
       players: parsed.players.map((player) => ({
         ...player,
         isChild: player.isChild ?? false,
+        ageBand: (player.isChild ?? false) ? player.ageBand ?? "6-8" : undefined,
         lapsCompleted: Number.isFinite(player.lapsCompleted) ? Math.max(0, player.lapsCompleted) : 0,
         cardStatus: player.cardStatus ?? emptyCardStatus(),
         properties: player.properties.map((property) => ({
@@ -234,6 +245,7 @@ export function loadGameSession(): GameSession | null {
       })),
       cardDecks: parsed.cardDecks ?? createCardDeckState(),
     };
+    return { ...migrated, learning: migrateLearningState(migrated) };
   } catch {
     return null;
   }

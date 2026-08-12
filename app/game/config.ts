@@ -4,6 +4,7 @@ import type {
   FamilyCard,
   GameLength,
   PlayerColor,
+  RentDifficulty,
 } from "./types";
 
 export const PLAYER_COLORS: Array<{
@@ -52,6 +53,13 @@ export const ECONOMY_PRESETS: EconomyPreset[] = [
   },
 ];
 
+export const RENT_DIFFICULTIES: RentDifficulty[] = [
+  { id: "gentle", name: "温和", description: "适合小朋友，收费 ×0.8", multiplier: 0.8 },
+  { id: "standard", name: "标准", description: "保持当前规则，收费 ×1.0", multiplier: 1 },
+  { id: "competitive", name: "激烈", description: "房屋与旅馆更有威慑力，收费 ×1.5", multiplier: 1.5 },
+  { id: "tycoon", name: "大亨", description: "接近传统大富翁的高压经营，收费 ×2.0", multiplier: 2 },
+];
+
 export const GAME_LENGTHS: GameLength[] = [
   { id: "quick", name: "欢乐快局", description: "12 轮 · 约 35 分钟", rounds: 12 },
   { id: "family", name: "家庭标准局", description: "18 轮 · 约 60 分钟", rounds: 18 },
@@ -66,6 +74,18 @@ const CITY_ENGLISH_NAME_OVERRIDES: Record<string, string> = {
 
 const englishCityName = (id: string) => CITY_ENGLISH_NAME_OVERRIDES[id]
   ?? id.split("-").map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`).join(" ");
+
+const REGION_NAMES = { asia: "亚洲", oceania: "大洋洲", africa: "非洲", europe: "欧洲", america: "美洲" } as const;
+const CITY_KNOWLEDGE_OVERRIDES: Record<string, string> = {
+  beijing: "北京的故宫是世界上规模最大的古代宫殿建筑群之一。",
+  tokyo: "东京拥有世界上非常繁忙的铁路交通网络。",
+  sydney: "悉尼歌剧院的屋顶看起来像扬起的白色船帆。",
+  cairo: "开罗附近的吉萨金字塔已有四千多年历史。",
+  paris: "埃菲尔铁塔最初是为 1889 年世界博览会建造的。",
+  london: "伦敦格林尼治是世界时区计算的重要起点。",
+  "new-york": "纽约自由女神像是法国送给美国的礼物。",
+  rio: "里约热内卢以嘉年华和科帕卡巴纳海滩闻名。",
+};
 
 const city = (
   index: number,
@@ -88,6 +108,9 @@ const city = (
   baseRent: Math.round(price * 0.085 / 10) * 10,
   buildCost: Math.round(price * 0.42 / 100) * 100,
   landmark,
+  continentName: REGION_NAMES[region],
+  knowledge: CITY_KNOWLEDGE_OVERRIDES[id] ?? `${name}位于${country}，是${REGION_NAMES[region]}旅途中值得认识的一座城市。`,
+  greeting: country === "中国" ? "你好，Hello" : undefined,
   icon: landmark,
 });
 

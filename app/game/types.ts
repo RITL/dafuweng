@@ -7,6 +7,9 @@ export type PlayerColor =
   | "rose";
 
 export type EconomyPresetId = "relaxed" | "classic" | "adventure";
+export type RentDifficultyId = "gentle" | "standard" | "competitive" | "tycoon";
+export type ChildAgeBand = "4-6" | "6-8" | "8-10" | "10+";
+export type LearningCategory = "math" | "geography" | "language" | "finance" | "observation";
 export type GameLengthId = "quick" | "family" | "unlimited";
 export type TileType =
   | "start"
@@ -34,6 +37,13 @@ export interface EconomyPreset {
   reliefFloor: number;
 }
 
+export interface RentDifficulty {
+  id: RentDifficultyId;
+  name: string;
+  description: string;
+  multiplier: number;
+}
+
 export interface GameLength {
   id: GameLengthId;
   name: string;
@@ -59,6 +69,9 @@ export interface CityTile extends BaseTile {
   baseRent: number;
   buildCost: number;
   landmark: string;
+  continentName: string;
+  knowledge: string;
+  greeting?: string;
 }
 
 export interface SpecialTile extends BaseTile {
@@ -103,11 +116,31 @@ export interface PlayerState {
   avatar: string;
   color: PlayerColor;
   isChild: boolean;
+  ageBand?: ChildAgeBand;
   cash: number;
   position: number;
   lapsCompleted: number;
   properties: OwnedProperty[];
   cardStatus: PlayerCardStatus;
+}
+
+export interface PlayerLearningStats {
+  visitedCityIds: string[];
+  viewedKnowledgeCityIds: string[];
+  challengeAttempts: number;
+  challengeCorrect: number;
+  challengeCategories: Partial<Record<LearningCategory, number>>;
+  builds: number;
+  collaborations: number;
+  stamps: number;
+}
+
+export interface GameLearningState {
+  knowledgeHintsEnabled: boolean;
+  lastChallengeRound: number;
+  lastChallengeCategory?: LearningCategory;
+  familyEnergy: number;
+  players: Record<string, PlayerLearningStats>;
 }
 
 export interface PlayerCardStatus {
@@ -150,6 +183,7 @@ export interface GameSession {
   version: 1;
   id: string;
   economyId: EconomyPresetId;
+  rentDifficultyId?: RentDifficultyId;
   gameLengthId: GameLengthId;
   voiceNarrationEnabled?: boolean;
   voiceEnabled: boolean;
@@ -161,4 +195,5 @@ export interface GameSession {
   updatedAt: number;
   events: GameEvent[];
   cardDecks: Record<"chance" | "destiny", CardDeckState>;
+  learning?: GameLearningState;
 }

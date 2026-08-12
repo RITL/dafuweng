@@ -7,6 +7,7 @@ import {
   GAME_LENGTHS,
   PLAYER_AVATARS,
   PLAYER_COLORS,
+  RENT_DIFFICULTIES,
 } from "./game/config";
 import { GameSessionScreen } from "./game/GameSessionScreen";
 import { RemoteControllerScreen, TelevisionRemoteHost, useTelevisionRemoteNavigation } from "./game/RemotePlay";
@@ -17,7 +18,7 @@ import {
   saveGameSession,
 } from "./game/session";
 import { useGameAudio } from "./game/use-game-audio";
-import type { EconomyPresetId, GameLengthId, GameSession, PlayerColor } from "./game/types";
+import type { ChildAgeBand, EconomyPresetId, GameLengthId, GameSession, PlayerColor, RentDifficultyId } from "./game/types";
 
 interface DraftPlayer {
   id: number;
@@ -25,13 +26,14 @@ interface DraftPlayer {
   avatar: string;
   color: PlayerColor;
   isChild: boolean;
+  ageBand?: ChildAgeBand;
 }
 
 const initialPlayers: DraftPlayer[] = [
   { id: 1, name: "爸爸", avatar: "🐼", color: "coral", isChild: false },
   { id: 2, name: "妈妈", avatar: "🦊", color: "ocean", isChild: false },
-  { id: 3, name: "多肉", avatar: "🐯", color: "sunny", isChild: true },
-  { id: 4, name: "喜悦", avatar: "🐰", color: "grape", isChild: true },
+  { id: 3, name: "多肉", avatar: "🐯", color: "sunny", isChild: true, ageBand: "4-6" },
+  { id: 4, name: "喜悦", avatar: "🐰", color: "grape", isChild: false },
 ];
 
 const featuredCities = BOARD_TILES.filter((tile) => tile.type === "city").slice(0, 8);
@@ -40,6 +42,7 @@ export default function Home() {
   const [players, setPlayers] = useState(initialPlayers);
   const [economy, setEconomy] = useState<EconomyPresetId>("classic");
   const [gameLength, setGameLength] = useState<GameLengthId>("family");
+  const [rentDifficulty, setRentDifficulty] = useState<RentDifficultyId>("standard");
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [session, setSession] = useState<GameSession | null>(null);
   const [restoreCandidate, setRestoreCandidate] = useState<GameSession | null>(null);
@@ -144,7 +147,7 @@ export default function Home() {
         // The game can still start; the in-game host will keep the fallback controls visible.
       }
     }
-    const nextSession = createGameSession(players, economy, gameLength, voiceEnabled);
+    const nextSession = createGameSession(players, economy, gameLength, voiceEnabled, rentDifficulty);
     saveGameSession(nextSession);
     setFreshSession(true);
     setSession(nextSession);
@@ -338,11 +341,12 @@ export default function Home() {
                       checked={player.isChild}
                       onChange={(event) => {
                         playUiSound(event.target.checked ? "add" : "tap");
-                        updatePlayer(player.id, { isChild: event.target.checked });
+                        updatePlayer(player.id, { isChild: event.target.checked, ageBand: event.target.checked ? player.ageBand ?? "6-8" : undefined });
                       }}
                     />
                     <span>🧠</span><b>我是小朋友</b><i aria-hidden="true" />
                   </label>
+                  {player.isChild && <label className="child-age-select"><span>适龄题目</span><select value={player.ageBand ?? "6-8"} onChange={(event) => updatePlayer(player.id, { ageBand: event.target.value as ChildAgeBand })}><option value="4-6">4–6 岁</option><option value="6-8">6–8 岁</option><option value="8-10">8–10 岁</option><option value="10+">10 岁以上</option></select></label>}
                 </article>
               );
             })}
@@ -374,6 +378,10 @@ export default function Home() {
                     <b>¥{preset.startingCash.toLocaleString()}</b>
                   </label>
                 ))}
+              </div>
+              <div className="rent-difficulty-picker">
+                <span><b>🏨 地产收费强度</b><small>单独调整所有房屋与旅馆租金</small></span>
+                <div>{RENT_DIFFICULTIES.map((difficulty) => <button className={rentDifficulty === difficulty.id ? "selected" : ""} type="button" key={difficulty.id} title={difficulty.description} onClick={() => { playUiSound("tap"); setRentDifficulty(difficulty.id); }}><b>{difficulty.name}</b><small>×{difficulty.multiplier.toFixed(1)}</small></button>)}</div>
               </div>
             </fieldset>
 

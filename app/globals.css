@@ -206,6 +206,16 @@ button { color: inherit; }
 .setting-panel { border: 1px solid var(--line); border-radius: 20px; padding: 18px; background: #fff; }
 .setting-panel legend { padding: 0 8px; font-weight: 900; }.setting-panel legend span { margin-right: 7px; }
 .option-list { display: flex; flex-direction: column; gap: 8px; }
+.rent-difficulty-picker { margin-top:12px;padding:11px 12px;border:1px solid #e5ddc8;border-radius:13px;background:#fff9e9; }.rent-difficulty-picker>span b,.rent-difficulty-picker>span small { display:block; }.rent-difficulty-picker>span b { font-size:13px; }.rent-difficulty-picker>span small { margin-top:3px;color:var(--muted);font-size:10px;line-height:1.35; }.rent-difficulty-picker>div { margin-top:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:5px; }.rent-difficulty-picker button { min-height:44px;padding:5px 2px;border:1px solid #e1d9c4;border-radius:9px;color:#665b43;background:#fff;cursor:pointer; }.rent-difficulty-picker button b,.rent-difficulty-picker button small { display:block; }.rent-difficulty-picker button b { font-size:11px; }.rent-difficulty-picker button small { margin-top:2px;font-size:9px; }.rent-difficulty-picker button.selected { color:#fff;border-color:#b77d19;background:#c88b23;box-shadow:0 5px 10px rgba(143,94,15,.18); }
+.child-age-select{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:6px;color:#526965;font-size:9px}.child-age-select select{min-height:30px;padding:3px 7px;border:1px solid #d8e3df;border-radius:8px;background:#fff;color:#183b3e;font:inherit}
+.learning-backdrop{position:fixed;inset:0;z-index:95;display:grid;place-items:center;padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));background:rgba(17,53,50,.62);backdrop-filter:blur(8px)}
+.city-knowledge-card,.travel-challenge-card{width:min(620px,calc(100vw - 28px));max-height:calc(100dvh - 28px);overflow:auto;border:1px solid rgba(255,255,255,.8);border-radius:28px;background:#fffdf6;box-shadow:0 28px 70px rgba(13,51,47,.28);color:#173f40}
+.city-knowledge-card>header,.travel-challenge-card>header{display:flex;align-items:center;gap:14px;padding:22px 24px 16px;background:linear-gradient(120deg,#e6f8f2,#fff6dc)}.city-knowledge-card>header>span,.travel-challenge-card>header>span{display:grid;place-items:center;width:54px;height:54px;border-radius:17px;background:#fff;font-size:29px}.city-knowledge-card header div,.travel-challenge-card header div{min-width:0;flex:1}.city-knowledge-card header small,.travel-challenge-card header small{color:#16877f;font-weight:800;letter-spacing:.08em}.city-knowledge-card h2,.travel-challenge-card h2{margin:4px 0 0;font-size:25px;line-height:1.2}.city-knowledge-card header button,.travel-challenge-card header button{width:44px;height:44px;border:0;border-radius:14px;background:#fff;color:#244d4c;font-size:25px;cursor:pointer}.knowledge-location{display:flex;justify-content:space-between;gap:12px;padding:18px 24px 0}.knowledge-location span{color:#16877f;font-weight:800}.city-knowledge-card>p,.travel-challenge-card>p{margin:16px 24px;font-size:18px;line-height:1.7}.knowledge-detail{display:grid;gap:5px;margin:0 24px;padding:15px;border-radius:15px;background:#eef8f5}.knowledge-detail span{font-size:26px}.knowledge-detail small{color:#66817e}.city-knowledge-card>footer,.travel-challenge-card>footer{display:flex;justify-content:flex-end;gap:10px;padding:18px 24px 22px}.city-knowledge-card footer button,.travel-challenge-card footer button{min-height:44px;padding:9px 15px;border:1px solid #cfe1dc;border-radius:13px;background:#fff;color:#24524f;font-weight:800;cursor:pointer}.city-knowledge-card footer .primary,.travel-challenge-card footer .primary{border-color:#16877f;background:#16877f;color:#fff}.challenge-category-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:4px 24px 8px}.challenge-category-grid button{min-height:112px;border:1px solid #d9e9e4;border-radius:18px;background:#f5fbf9;color:#204947;cursor:pointer}.challenge-category-grid span,.challenge-category-grid b,.challenge-category-grid small{display:block}.challenge-category-grid span{font-size:31px}.challenge-category-grid b{margin-top:7px;font-size:16px}.challenge-category-grid small{margin-top:4px;color:#728c88}.challenge-options{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:22px 24px}.challenge-options button{min-height:66px;border:2px solid #d6e7e2;border-radius:16px;background:#fff;color:#173f40;font-size:18px;font-weight:900;cursor:pointer}.challenge-hint,.challenge-feedback{padding:14px 16px;border-radius:15px;background:#fff2c7}.challenge-feedback{background:#e8f8e7;color:#285b33;font-weight:800}.challenge-feedback small{display:block;margin-top:5px}
+.city-knowledge-card button:focus-visible,.travel-challenge-card button:focus-visible{outline:4px solid #f3b745;outline-offset:3px}
+@media (max-height:500px) and (orientation:landscape){.city-knowledge-card,.travel-challenge-card{width:min(720px,calc(100vw - 120px));border-radius:20px}.city-knowledge-card>header,.travel-challenge-card>header{padding:12px 16px 9px}.city-knowledge-card>header>span,.travel-challenge-card>header>span{width:42px;height:42px;font-size:22px}.city-knowledge-card h2,.travel-challenge-card h2{font-size:19px}.knowledge-location{padding:10px 16px 0}.city-knowledge-card>p,.travel-challenge-card>p{margin:9px 16px;font-size:14px;line-height:1.45}.knowledge-detail{margin:0 16px;padding:9px}.city-knowledge-card>footer,.travel-challenge-card>footer{padding:10px 16px 13px}.challenge-category-grid{padding:2px 16px 5px}.challenge-category-grid button{min-height:72px}.challenge-category-grid span{font-size:23px}.challenge-options{padding:13px 16px}.challenge-options button{min-height:48px}}
+@media (max-width:560px){.challenge-category-grid{grid-template-columns:1fr}.challenge-category-grid button{min-height:64px}.city-knowledge-card>footer,.travel-challenge-card>footer{flex-wrap:wrap}.city-knowledge-card>footer button,.travel-challenge-card>footer button{flex:1 1 auto}}
+@media (prefers-reduced-motion:reduce){.learning-backdrop{backdrop-filter:none}.city-knowledge-card,.travel-challenge-card{scroll-behavior:auto}}
+.learning-awards{width:min(1100px,92vw);margin:18px auto;padding:18px;border-radius:22px;background:rgba(255,255,255,.92);color:#19413f}.learning-awards>header{text-align:center}.learning-awards h3{margin:3px 0 12px;font-size:22px}.learning-awards>div{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.learning-awards article{padding:13px;border:1px solid #dce9e5;border-radius:15px;background:#f7fbf9;text-align:center}.learning-awards article span,.learning-awards article b,.learning-awards article small{display:block}.learning-awards article span{font-size:27px}.learning-awards article p{margin:5px 0;font-weight:800}.learning-awards article small{color:#6b827e}
 .option-card { position: relative; min-height: 62px; padding: 10px 12px 10px 42px; border: 1px solid var(--line); border-radius: 13px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: .2s ease; }
 .option-card input { position: absolute; opacity: 0; }.option-card .radio-mark { position: absolute; left: 14px; width: 17px; height: 17px; border-radius: 50%; border: 2px solid #b9c7c8; }
 .option-card.selected { border-color: var(--teal); background: rgba(22,127,123,.045); box-shadow: inset 0 0 0 1px var(--teal); }
@@ -237,6 +247,56 @@ footer { width: min(1180px, calc(100% - 48px)); margin: 45px auto 0; padding: 26
   .music-copy, .music-button > i { display: none; }
   .music-icon { width: 34px; height: 34px; }
   .topbar, .hero, .setup-section, .preview-section, footer { width: min(100% - 24px, 1180px); }.topbar { height: 76px; }.status-pill, .round-button { display: none; }.hero { margin-top: 0; gap: 12px; min-height: auto; }.hero h1 { font-size: 48px; }.travel-scene { min-height: 390px; transform: scale(.84); margin: -25px -50px; }.setup-section { padding: 26px 16px; border-radius: 24px; }.section-heading { display: block; }.section-heading p { margin-top: 10px; }.player-grid { grid-template-columns: 1fr 1fr; gap: 10px; }.player-card, .add-player { min-height: 225px; }.settings-grid { grid-template-columns: 1fr; }.option-card { padding-right: 9px; }.settlement-note { align-items: flex-start; }.formula-chip { display: none; }.primary-button { min-width: 100%; }.city-ribbon { grid-template-columns: repeat(4, 1fr); }.preview-board { min-height: 0; }.foundation-summary { padding: 22px 4px; } footer { flex-direction: column; gap: 7px; }
+}
+
+/* Portrait phones need their own home composition. The landscape preview uses
+ * negative scene margins to fill a short screen; those dimensions must never
+ * be allowed to widen or offset the portrait hero. */
+@media (orientation: portrait) and (max-width: 600px) {
+  html, body, .app-shell { width: 100%; max-width: 100%; overflow-x: clip; }
+  .app-shell > .topbar,
+  .app-shell > .hero,
+  .app-shell > .setup-section,
+  .app-shell > .preview-section,
+  .app-shell > footer {
+    width: calc(100% - max(24px, env(safe-area-inset-left) + env(safe-area-inset-right) + 16px));
+    max-width: 100%;
+  }
+  .app-shell > .topbar { height: 76px; }
+  .app-shell > .hero {
+    display: block;
+    min-width: 0;
+    min-height: auto;
+    margin: 18px auto 12px;
+    padding: 0;
+    text-align: center;
+  }
+  .hero-copy { width: 100%; min-width: 0; max-width: 100%; margin: 0 auto; }
+  .hero .eyebrow { max-width: 100%; font-size: 10px; white-space: normal; }
+  .hero h1 {
+    max-width: 100%;
+    margin: 14px auto;
+    font-size: clamp(38px, 11vw, 48px);
+    line-height: 1.05;
+    letter-spacing: -.045em;
+    overflow-wrap: anywhere;
+  }
+  .hero-copy > p { max-width: 34em; margin: 25px auto 18px; font-size: 14px; line-height: 1.75; }
+  .hero-promise { width: 100%; justify-content: center; gap: 7px; }
+  .hero-promise span { padding: 8px 9px; font-size: 11px; }
+  .iphone-install-button { width: 100%; max-width: 100%; margin: 18px auto 0; }
+  .hero .travel-scene {
+    width: 100%;
+    max-width: 100%;
+    min-height: 390px;
+    margin: 6px 0 -18px;
+    overflow: hidden;
+    transform: none;
+  }
+  .hero .globe { width: min(86vw, 350px); height: min(86vw, 350px); }
+  .hero .route-two { right: -120px; }
+  .hero .postcard-paris { right: 4px; }
+  .hero .luggage { right: 32px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
@@ -526,6 +586,16 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
 .roulette-ball { position: absolute; z-index: 8; left: 50%; top: 50%; width: 11px; height: 11px; border: 1px solid #e9f0f2; border-radius: 50%; background: radial-gradient(circle at 30% 24%, #fff, #9ca7aa 42%, #343a3c 77%); box-shadow: 0 2px 4px rgba(0,0,0,.48); transform: translate(-50%, -50%) rotate(var(--ball-rotation)) translateY(-38px); transition: transform 1.75s cubic-bezier(.1,.76,.12,1); }.ball-two { width: 10px; height: 10px; transition-duration: 1.9s; }
 .roulette-equation { position: absolute; z-index: 12; left: 50%; bottom: -4px; min-width: 78px; padding: 4px 6px; color: #44300e; border: 2px solid #fff; border-radius: 999px; background: #ffdf75; box-shadow: 0 4px 10px rgba(25,21,10,.3); transform: translateX(-50%); text-align: center; font-size: 9px; line-height: 1; white-space: nowrap; }.roulette-equation.changing { animation: rouletteFacePulse .19s ease-in-out infinite alternate; }
 .turn-actions { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; }
+.roll-mode-switch { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 3px; border-radius: 10px; background: rgba(5,48,49,.22); }
+.roll-mode-switch button { min-height: 29px; padding: 5px 8px; color: rgba(255,255,255,.76); border: 0; border-radius: 8px; background: transparent; cursor: pointer; font-size: 7px; font-weight: 900; }
+.roll-mode-switch button.active { color: #573f0d; background: #ffdc75; box-shadow: 0 3px 9px rgba(0,0,0,.18); }
+.roll-mode-switch button:disabled { cursor: not-allowed; opacity: .62; }
+.physical-roll-badge { width: 116px; min-height: 116px; padding: 12px 8px; display: grid; place-items: center; align-content: center; justify-self: center; color: #49360c; border: 4px solid #f4ca55; border-radius: 50%; background: radial-gradient(circle at 32% 25%,#fff8cf,#ffc957 72%); box-shadow: inset 0 0 0 4px rgba(255,255,255,.55),0 9px 18px rgba(0,0,0,.24); text-align: center; }
+.physical-roll-badge span { font-size: 28px; line-height: 1; }.physical-roll-badge b,.physical-roll-badge small { display: block; }.physical-roll-badge b { margin-top: 5px; font-size: 8px; }.physical-roll-badge small { margin-top: 3px; font-size: 5px; line-height: 1.3; }
+.physical-roll-panel { grid-column: 1 / -1; padding: 8px; border: 1px solid rgba(255,218,112,.65); border-radius: 12px; background: rgba(255,253,239,.96); }
+.physical-roll-panel p { margin: 0 0 6px; display: flex; justify-content: space-between; gap: 8px; color: #31504b; }.physical-roll-panel p b { font-size: 8px; }.physical-roll-panel p small { color: #78847d; font-size: 6px; }
+.physical-roll-panel > div { display: grid; grid-template-columns: repeat(13,1fr); gap: 3px; }.physical-roll-panel > div button { min-width: 0; height: 27px; padding: 0; color: #28504c; border: 1px solid #d6dfd7; border-radius: 7px; background: #fff; cursor: pointer; font-size: 8px; font-weight: 1000; }.physical-roll-panel > div button:hover,.physical-roll-panel > div button:focus-visible { color: #fff; border-color: var(--active-color); background: var(--active-color); }
+.physical-skip-animation { grid-column: 1 / -1; }
 .start-turn-button { min-height: 58px; padding: 6px 7px 6px 13px; display: flex; align-items: center; justify-content: space-between; gap: 7px; color: #573f0d; border: 0; border-radius: 13px; background: linear-gradient(135deg, #ffdf87, #ffc957); box-shadow: 0 9px 19px rgba(255,198,66,.24); cursor: pointer; }.start-turn-button span { font-size: 8px; font-weight: 900; opacity: .76; }.start-turn-button b { padding: 9px; border-radius: 9px; background: rgba(255,255,255,.34); font-size: 10px; white-space: nowrap; }.start-turn-button:disabled { cursor: wait; opacity: .78; }
 .phase-ready .start-turn-button { animation: readyActionGlow 1.65s ease-in-out infinite; }
 .skip-turn-animation { min-height: 38px; padding: 0 8px; color: #fff; border: 1px solid rgba(255,255,255,.27); border-radius: 10px; background: rgba(255,255,255,.1); cursor: pointer; font-size: 7px; font-weight: 900; white-space: nowrap; }
@@ -594,6 +664,8 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
 .first-player-reveal { position: fixed; z-index: 60; inset: 0; display: grid; place-content: center; justify-items: center; overflow: hidden; color: #fff; text-align: center; background: radial-gradient(circle, #36aaa2, #0d625f 70%); animation: revealExit 2.4s ease both; }.reveal-rays { position: absolute; width: 90vmax; height: 90vmax; background: repeating-conic-gradient(rgba(255,255,255,.09) 0 8deg, transparent 8deg 18deg); animation: gentleSpin 18s linear infinite; }.reveal-label { position: relative; padding: 7px 12px; border: 1px solid rgba(255,255,255,.38); border-radius: 999px; font-size: 9px; letter-spacing: .22em; font-weight: 900; }.reveal-avatar { position: relative; width: 140px; height: 140px; margin: 20px 0 12px; display: grid; place-items: center; border-radius: 42px; background: #fff8e9; border: 7px solid rgba(255,255,255,.36); box-shadow: 0 24px 60px rgba(5,45,47,.3); font-size: 86px; animation: winnerBounce .7s cubic-bezier(.18,.9,.25,1.2) both; }.first-player-reveal h2, .first-player-reveal p { position: relative; }.first-player-reveal h2 { margin: 0; font-size: clamp(34px, 5vw, 62px); }.first-player-reveal p { margin: 8px 0 0; opacity: .78; font-size: 12px; }
 
 .settlement-screen { position: fixed; z-index: 70; inset: 0; padding: 26px clamp(18px, 5vw, 80px); overflow: auto; color: #fff; background: radial-gradient(circle at 50% 5%, #ffcd67, transparent 28rem), linear-gradient(150deg, #0d756f, #0a4c55 65%, #163943); animation: modalFade .3s ease both; }.winner-banner { position: relative; z-index: 2; text-align: center; }.winner-banner > span { display: block; font-size: 68px; filter: drop-shadow(0 12px 15px rgba(0,0,0,.22)); animation: winnerBounce .8s cubic-bezier(.18,.9,.25,1.2) both; }.winner-banner small { display: block; margin-top: 2px; color: #ffe3a2; font-size: 10px; letter-spacing: .22em; font-weight: 900; }.winner-banner h2 { margin: 5px 0; font-size: clamp(32px, 5vw, 58px); }.winner-banner p { margin: 0; color: rgba(255,255,255,.72); font-size: 11px; }
+.settlement-skip-celebration { min-height: 38px; margin-top: 10px; padding: 0 14px; color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; background: rgba(5,52,55,.22); cursor: pointer; font-size: 9px; font-weight: 900; }
+.settlement-screen.reduced-celebration,.settlement-screen.reduced-celebration .winner-banner > span { animation: none; }
 .ranking-table { position: relative; z-index: 2; width: min(1080px, 100%); margin: 23px auto 0; padding: 9px; border: 1px solid rgba(255,255,255,.17); border-radius: 23px; background: rgba(255,255,255,.09); backdrop-filter: blur(14px); }.ranking-head, .ranking-table article { display: grid; grid-template-columns: 1.5fr repeat(4, 1fr); align-items: center; gap: 10px; }.ranking-head { padding: 9px 15px; color: rgba(255,255,255,.6); font-size: 8px; text-align: right; }.ranking-head span:first-child { text-align: left; }.ranking-table article { min-height: 55px; margin-top: 5px; padding: 9px 15px; border-radius: 15px; background: rgba(255,255,255,.09); text-align: right; font-size: 10px; }.ranking-table article.winner-row { color: #4d3510; background: linear-gradient(90deg, #fff2be, #ffd978); box-shadow: 0 10px 24px rgba(255,197,73,.2); transform: scale(1.012); }.rank-person { display: flex; align-items: center; gap: 10px; text-align: left; }.rank-person i { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 10px; background: rgba(255,255,255,.19); font-style: normal; font-size: 12px; }.rank-person b { font-size: 12px; }.ranking-table article strong { font-size: 13px; }
 .settlement-actions { position: relative; z-index: 2; width: min(480px, 100%); margin: 20px auto 0; display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }.settlement-actions button { min-height: 47px; border: 1px solid rgba(255,255,255,.25); border-radius: 14px; color: #fff; background: rgba(255,255,255,.1); cursor: pointer; font-weight: 900; font-size: 10px; }.settlement-actions .finish-game { color: #5c3d0a; border: 0; background: #ffd978; }
 .confetti { position: fixed; z-index: 1; inset: 0; overflow: hidden; pointer-events: none; }.confetti i { position: absolute; top: -30px; left: var(--confetti-left); width: 9px; height: 18px; border-radius: 3px; background: var(--confetti-color); animation: confettiFall var(--confetti-duration) linear var(--confetti-delay) infinite; }
@@ -1189,10 +1261,13 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
 .classic-turn-copy small { color: #167d73; font-size: 13px; font-weight: 1000; letter-spacing: .13em; }
 .classic-turn-copy h2 { margin: 6px 0 3px; color: #183b3a; font-size: clamp(23px,2vw,36px); line-height: 1.15; }
 .classic-turn-copy p { margin: 0 0 8px; color: #5c7973; font-size: 14px; font-weight: 800; }
-.classic-board-center .roulette-console { width: 150px; height: 150px; margin: 3px auto 10px; }
+.classic-board-center .roulette-console { width: 150px; height: 150px; flex: 0 0 150px; aspect-ratio: 1; margin: 3px auto 10px; }
 .classic-board-center .number-roulette.physical-ring span { font-size: 8px; }
 .classic-board-center .roulette-equation { min-width: 105px; padding: 7px 10px; font-size: 18px; }
 .classic-turn-actions { width: min(430px,70%); display: grid; gap: 6px; }
+.classic-board-center .roll-mode-switch { width: min(430px,70%); }
+.classic-board-center .physical-roll-badge { width: 128px; min-height: 128px; }
+.classic-physical-roll-panel { width: min(560px,88%); }
 .classic-turn-actions .start-turn-button { min-height: 62px; }
 .classic-turn-actions .start-turn-button span { font-size: 13px; }
 .classic-turn-actions .start-turn-button b { font-size: 18px; }
@@ -1230,12 +1305,97 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
 
 @media (max-width: 1099px) and (orientation: landscape) {
   .classic-live-board { min-width: 680px; min-height: 360px; }
-  .classic-board-center .roulette-console { width: 105px; height: 105px; }
+  .classic-board-center .roulette-console { width: 105px; height: 105px; flex-basis: 105px; }
   .classic-turn-copy h2 { font-size: 20px; }
   .classic-turn-copy p, .classic-turn-copy small { font-size: 9px; }
   .classic-turn-actions .start-turn-button { min-height: 48px; }
   .classic-turn-actions .start-turn-button span { font-size: 8px; }
   .classic-turn-actions .start-turn-button b { font-size: 11px; }
+}
+
+@media (orientation: landscape) and (max-width: 1099px) and (max-height: 560px) {
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) {
+    justify-content: flex-start;
+    padding: 12px 7% 5px;
+  }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .classic-turn-copy h2 {
+    max-width: 100%;
+    margin: 1px auto;
+    font-size: clamp(14px, 2.15vw, 18px);
+    line-height: 1.05;
+    white-space: nowrap;
+  }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .classic-turn-copy small { font-size: 7px; }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .classic-turn-copy p { margin-bottom: 3px; font-size: 8px; }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .physical-roll-badge {
+    width: 94px;
+    min-height: 72px;
+    padding: 6px;
+  }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .physical-roll-badge > span { font-size: 27px; }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .physical-roll-badge b { font-size: 8px; }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .physical-roll-badge small { display: none; }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .roll-mode-switch { margin-top: 0; }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .classic-physical-roll-panel { width: min(600px,94%); padding: 5px 7px; }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .classic-physical-roll-panel p { margin-bottom: 4px; }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .classic-physical-roll-panel > div button { height: 25px; }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .classic-safety-note { margin-top: 3px; font-size: 6px; }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .motion-mode-toggle { display: none; }
+}
+
+/* Very short phone landscapes: reserve the center's height for all 0–24 choices. */
+@media (orientation: landscape) and (max-width: 1099px) and (max-height: 430px) {
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) {
+    padding-top: 12px;
+    padding-bottom: 4px;
+  }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .classic-turn-copy small {
+    font-size: 6px;
+    line-height: 1;
+  }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .classic-turn-copy h2 {
+    margin: 3px auto 2px;
+    font-size: 16px;
+    line-height: 1.05;
+  }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .classic-turn-copy p {
+    margin: 3px 0 5px;
+    font-size: 7px;
+    line-height: 1.1;
+  }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .physical-roll-badge {
+    width: 84px;
+    min-height: 68px;
+    padding: 4px;
+    border-width: 3px;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.55), 0 4px 9px rgba(0,0,0,.18);
+  }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .physical-roll-badge > span { font-size: 23px; }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .physical-roll-badge b {
+    margin-top: 2px;
+    font-size: 7px;
+  }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .roll-mode-switch {
+    margin-top: 4px;
+    padding: 2px;
+  }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .roll-mode-switch button {
+    min-height: 22px;
+    padding-block: 2px;
+  }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .classic-physical-roll-panel {
+    margin-top: 4px;
+    padding-top: 4px;
+    padding-bottom: 3px;
+  }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .classic-physical-roll-panel p {
+    margin-bottom: 2px;
+    line-height: 1;
+  }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .classic-physical-roll-panel > div button {
+    height: 22px;
+  }
+  .classic-board-center.phase-ready:has(.classic-physical-roll-panel) .classic-safety-note { display: none; }
 }
 
 /* The playable game fills the available landscape viewport. */
@@ -1279,6 +1439,22 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
 }
 .live-game-stage.proportional-large-stage .game-shell.tv-mode .control-deck {
   height: 828px;
+}
+
+.rent-difficulty-rules { margin-bottom:12px;padding:13px 15px;display:flex;align-items:center;gap:14px;border:1px solid #e7d7aa;border-radius:16px;background:#fff7dc; }
+.rent-difficulty-rules>span { min-width:180px; }
+.rent-difficulty-rules>span b,.rent-difficulty-rules>span small,.rent-difficulty-rules button b,.rent-difficulty-rules button small { display:block; }
+.rent-difficulty-rules>span b { font-size:12px; }
+.rent-difficulty-rules>span small { margin-top:4px;color:#796c4e;font-size:8px; }
+.rent-difficulty-rules>div { flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:6px; }
+.rent-difficulty-rules button { min-height:47px;border:1px solid #e4d8b8;border-radius:10px;color:#665d49;background:#fff;cursor:pointer; }
+.rent-difficulty-rules button b { font-size:9px; }
+.rent-difficulty-rules button small { margin-top:2px;font-size:7px; }
+.rent-difficulty-rules button.active { color:#fff;border-color:#a97116;background:#bd8120; }
+
+@media (max-width: 760px) {
+  .rent-difficulty-rules { align-items:stretch;flex-direction:column; }
+  .rent-difficulty-rules>span { min-width:0; }
 }
 
 /* Phone and small-tablet landscape home screen.
@@ -1359,6 +1535,18 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
   .setup-section .option-card strong { font-size: 10px; }
   .setup-section .option-card small { font-size: 7px; }
   .setup-section .option-card b { font-size: 9px; }
+  .setup-section .rent-difficulty-picker { margin-top: 7px; padding: 7px 8px; border-radius: 10px; }
+  .setup-section .rent-difficulty-picker > span b { font-size: 11px; }
+  .setup-section .rent-difficulty-picker > span small { margin-top: 1px; font-size: 8px; line-height: 1.2; }
+  .setup-section .rent-difficulty-picker > div { margin-top: 5px; gap: 4px; }
+  .setup-section .rent-difficulty-picker button {
+    min-width: 0;
+    min-height: 44px;
+    padding: 4px 1px;
+    touch-action: manipulation;
+  }
+  .setup-section .rent-difficulty-picker button b { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+  .setup-section .rent-difficulty-picker button small { margin-top: 1px; font-size: 8px; }
   .setup-section .voice-switch { margin-top: 6px; padding: 7px 9px; }
   .setup-section .voice-switch b { font-size: 9px; }
   .setup-section .voice-switch small { font-size: 7px; }

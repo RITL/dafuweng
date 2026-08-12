@@ -1,4 +1,4 @@
-import { BOARD_TILES, ECONOMY_PRESETS } from "./config";
+import { BOARD_TILES, ECONOMY_PRESETS, RENT_DIFFICULTIES } from "./config";
 import type { BoardTile, CityTile, GameEvent, GameSession, OwnedProperty } from "./types";
 
 const makeEvent = (session: GameSession, kind: GameEvent["kind"], message: string, playerId?: string): GameEvent => ({
@@ -26,10 +26,11 @@ export const getPropertyOwner = (session: GameSession, tileId: string) => {
 export const calculateRent = (session: GameSession, city: CityTile, property: OwnedProperty): number => {
   if (property.mortgaged) return 0;
   const economy = ECONOMY_PRESETS.find((candidate) => candidate.id === session.economyId) ?? ECONOMY_PRESETS[1];
+  const rentDifficulty = RENT_DIFFICULTIES.find((candidate) => candidate.id === session.rentDifficultyId) ?? RENT_DIFFICULTIES[1];
   const levelMultiplier = [1, 2, 3.25, 5, 7.5, 10][property.buildingLevel];
   const owner = session.players.find((player) => player.properties.some((candidate) => candidate.tileId === property.tileId));
   const cardMultiplier = owner?.cardStatus?.rentBoostTurns ? owner.cardStatus.rentMultiplier : 1;
-  return Math.round(city.baseRent * levelMultiplier * economy.rentMultiplier * cardMultiplier / 10) * 10;
+  return Math.round(city.baseRent * levelMultiplier * economy.rentMultiplier * rentDifficulty.multiplier * cardMultiplier / 10) * 10;
 };
 
 const withEvent = (session: GameSession, event: GameEvent): GameSession => ({

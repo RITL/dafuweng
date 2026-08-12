@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BOARD_TILES, ECONOMY_PRESETS, GAME_LENGTHS, PLAYER_COLORS } from "./config";
+import { BOARD_TILES, ECONOMY_PRESETS, GAME_LENGTHS, PLAYER_COLORS, RENT_DIFFICULTIES } from "./config";
 import { drawAndResolveCard } from "./cards";
 import type { CardResolution } from "./cards";
 import {
@@ -25,6 +25,8 @@ import { parseSpokenNumber } from "./voice";
 import type { UiSound } from "./use-game-audio";
 import type { BoardTile, CityTile, GameSession, OwnedProperty, PlayerState } from "./types";
 import { getClassicBoardGridArea, shouldUseNativeMirrorLayout } from "./display";
+import { ageBandForPlayer, challengesForAge, createLearningAwards, LEARNING_CATEGORY_LABELS, migrateLearningState, recordBuild, recordChallenge, recordCityVisit, recordCollaboration, recordKnowledgeViewed, shouldOfferChallenge } from "./learning";
+import type { TravelChallenge } from "./learning";
 
 type TurnPhase = "ready" | "spinning" | "answering" | "moving" | "resolving" | "card" | "deciding" | "rescue" | "handoff";
 
@@ -83,6 +85,7 @@ const REDUCED_MOTION_KEY = "family-world-tour-reduced-motion";
 const VOICE_WAIT_REMINDER_MS = 15000;
 const VOICE_GUIDE_KEY = "family-world-tour-voice-guide-v1";
 const ONBOARDING_KEY = "family-world-tour-onboarding-v1";
+const ROLL_INPUT_MODE_KEY = "family-world-tour-roll-input-mode-v1";
 const REMOTE_ANSWER_EVENT = "family-world-tour-remote-answer";
 const REMOTE_CLOSE_OVERLAY_EVENT = "family-world-tour-remote-close-overlay";
 const MATH_ENCOURAGEMENTS = [
@@ -113,6 +116,7 @@ const MATH_ENCOURAGEMENTS = [
 ];
 
 type VoiceVisualState = "idle" | "requesting" | "speaking" | "listening" | "heard" | "error" | "unsupported" | "off";
+type RollInputMode = "electronic" | "physical";
 
 interface SpeechRecognitionResultLike extends ArrayLike<{ transcript: string }> {
   isFinal?: boolean;
@@ -204,7 +208,10 @@ function ImmersiveWorldBoard({
   voiceVisualState,
   arrivalNotice,
   reducedMotion,
+  rollInputMode,
   onStartTurn,
+  onManualRoll,
+  onRollInputModeChange,
   onAnswer,
   onRetryAnswer,
   onSkipAnimation,
@@ -222,7 +229,10 @@ function ImmersiveWorldBoard({
   voiceVisualState: VoiceVisualState;
   arrivalNotice: string;
   reducedMotion: boolean;
+  rollInputMode: RollInputMode;
   onStartTurn: () => void;
+  onManualRoll: (steps: number) => void;
+  onRollInputModeChange: (mode: RollInputMode) => void;
   onAnswer: (answer: number) => void;
   onRetryAnswer: () => void;
   onSkipAnimation: () => void;
@@ -368,12 +378,12 @@ function ImmersiveWorldBoard({
         <section className={`scene-action-panel phase-${phase}${reducedMotion ? " reduced-motion" : ""}`}>
           <div className="turn-phase-copy">
             <small>{phaseCopy[phase].eyebrow}</small>
-            <b>{phase === "moving" ? `还剩 ${Math.max(0, (movementProgress?.total ?? rouletteResult?.total ?? 0) - (movementProgress?.current ?? 0))} 格` : phaseCopy[phase].title}</b>
+            <b>{phase === "ready" && rollInputMode === "physical" ? "转动实体俄罗斯轮盘，录入最终点数" : phase === "moving" ? `还剩 ${Math.max(0, (movementProgress?.total ?? rouletteResult?.total ?? 0) - (movementProgress?.current ?? 0))} 格` : phaseCopy[phase].title}</b>
             <span>{arrivalNotice && ["resolving", "deciding", "rescue", "handoff"].includes(phase) ? `📍 ${arrivalNotice}` : `${currentPlayer.avatar} ${currentPlayer.name}${phase === "ready" ? "，到你啦！" : ""}`}</span>
             {phase === "ready" && session.voiceEnabled && <em className="voice-turn-state">🎙️ {voiceStatus}</em>}
           </div>
 
-          <div className="roulette-console twin-ball" aria-live="assertive" aria-label={phase === "spinning" ? "双球轮盘正在转动" : rouletteResult ? `两球点数 ${rouletteResult.first} 加 ${rouletteResult.second}` : "双球零到十二轮盘"}>
+          {rollInputMode === "electronic" ? <div className="roulette-console twin-ball" aria-live="assertive" aria-label={phase === "spinning" ? "双球轮盘正在转动" : rouletteResult ? `两球点数 ${rouletteResult.first} 加 ${rouletteResult.second}` : "双球零到十二轮盘"}>
             <div className="number-roulette physical-ring" aria-hidden="true">
               {Array.from({ length: 26 }, (_, index) => index % 13).map((number, index) => <span key={`${number}-${index}`} style={{ "--roulette-index": index } as React.CSSProperties}>{number}</span>)}
               <i className="gold-spinner"><b /><b /><b /><b /></i>
@@ -383,20 +393,31 @@ function ImmersiveWorldBoard({
             <strong className={phase === "spinning" ? "roulette-equation changing" : "roulette-equation"}>
               {phase === "spinning" ? "转动中…" : rouletteResult ? `${rouletteResult.first} + ${rouletteResult.second}${currentPlayer.isChild && phase === "answering" ? " = ?" : ` = ${rouletteResult.total}`}` : "? + ?"}
             </strong>
+          </div> : <div className="physical-roll-badge" aria-live="polite"><span>🎡</span><b>实体俄罗斯轮盘</b><small>{session.voiceEnabled ? "停在 0–24，报出或点击最终点数" : "停稳后点击最终点数 0–24"}</small></div>}
+
+          <div className="roll-mode-switch" aria-label="选择点数产生方式">
+            <button type="button" disabled={isBusy} className={rollInputMode === "electronic" ? "active" : ""} onClick={() => onRollInputModeChange("electronic")}>电子轮盘</button>
+            <button type="button" disabled={isBusy} className={rollInputMode === "physical" ? "active" : ""} onClick={() => onRollInputModeChange("physical")}>🎡 实体轮盘</button>
           </div>
 
-          <div className="turn-actions">
+          {rollInputMode === "electronic" && <div className="turn-actions">
             <button className="start-turn-button" type="button" onClick={() => onStartTurn()} disabled={isBusy}>
               <span>{phase === "ready" ? "开始前进" : phase === "spinning" ? "双球滚动中" : phase === "answering" ? "等待回答" : phase === "moving" ? "旅行中" : phase === "resolving" ? "落点确认中" : "交接中"}</span>
               <b>{phase === "ready" ? "转动双球轮盘  →" : rouletteResult ? `${rouletteResult.first} + ${rouletteResult.second}${phase === "answering" ? " = ?" : ` = ${rouletteResult.total}`}` : "请稍候"}</b>
             </button>
             {isBusy && phase !== "answering" && <button className="skip-turn-animation" type="button" onClick={onSkipAnimation}>{phase === "spinning" ? "跳过轮盘动画" : phase === "moving" ? "跳过移动动画" : phase === "resolving" ? "立即显示结果" : phase === "handoff" ? "立即下一位" : "跳过动画"}</button>}
-          </div>
+          </div>}
+
+          {rollInputMode === "physical" && phase === "ready" && <div className="physical-roll-panel">
+            <p><b>{session.voiceEnabled ? "实体轮盘停稳后，说“走 8 步”" : "实体轮盘停稳后，选择最终点数"}</b><small>{session.voiceEnabled ? "也可以直接点击最终点数 0–24" : "点击下方数字 0–24"}</small></p>
+            <div>{Array.from({ length: 25 }, (_, steps) => <button type="button" key={steps} onClick={() => onManualRoll(steps)}>{steps}</button>)}</div>
+          </div>}
+          {rollInputMode === "physical" && isBusy && phase !== "answering" && <button className="skip-turn-animation physical-skip-animation" type="button" onClick={onSkipAnimation}>{phase === "moving" ? "跳过移动动画" : phase === "resolving" ? "立即显示结果" : phase === "handoff" ? "立即下一位" : "跳过动画"}</button>}
 
           {phase === "answering" && (
             <div className="math-answer-panel">
-              <p><b>{mathFeedback || `请让 ${currentPlayer.name} 回答`}</b><small><i className={`mini-voice-wave state-${voiceVisualState}`} aria-hidden="true"><em /><em /><em /><em /></i>🎙️ {voiceStatus} · 会持续等待，不用点击</small></p>
-              <button className="retry-listen-button" type="button" onClick={onRetryAnswer}>备用：重新开启麦克风</button>
+              <p><b>{mathFeedback || `请让 ${currentPlayer.name} 回答`}</b>{session.voiceEnabled && <small><i className={`mini-voice-wave state-${voiceVisualState}`} aria-hidden="true"><em /><em /><em /><em /></i>🎙️ {voiceStatus} · 会持续等待，不用点击</small>}</p>
+              {session.voiceEnabled && <button className="retry-listen-button" type="button" onClick={onRetryAnswer}>备用：重新开启麦克风</button>}
               <div>{Array.from({ length: 25 }, (_, answer) => <button type="button" key={answer} onClick={() => onAnswer(answer)}>{answer}</button>)}</div>
             </div>
           )}
@@ -409,7 +430,7 @@ function ImmersiveWorldBoard({
           >
             {reducedMotion ? "✓ 已简化动效" : "简化动效"}
           </button>
-          <small className="turn-safety-note">每回合只生成一次公平随机点数，动画不会改变结果</small>
+          <small className="turn-safety-note">{rollInputMode === "physical" ? "线下结果由家庭确认，提交后每回合只移动一次" : "每回合只生成一次公平随机点数，动画不会改变结果"}</small>
         </section>
       </div>
     </div>
@@ -430,7 +451,10 @@ function ClassicWorldBoard(props: Parameters<typeof ImmersiveWorldBoard>[0]) {
     voiceVisualState,
     arrivalNotice,
     reducedMotion,
+    rollInputMode,
     onStartTurn,
+    onManualRoll,
+    onRollInputModeChange,
     onAnswer,
     onRetryAnswer,
     onSkipAnimation,
@@ -483,11 +507,11 @@ function ClassicWorldBoard(props: Parameters<typeof ImmersiveWorldBoard>[0]) {
         <section className={`classic-board-center phase-${phase}${reducedMotion ? " reduced-motion" : ""}`}>
           <div className="classic-turn-copy">
             <small>{phaseCopy[phase].eyebrow}</small>
-            <h2>{phase === "moving" ? `还剩 ${Math.max(0, (movementProgress?.total ?? rouletteResult?.total ?? 0) - (movementProgress?.current ?? 0))} 格` : phaseCopy[phase].title}</h2>
+            <h2>{phase === "ready" && rollInputMode === "physical" ? "实体轮盘：录入最终点数" : phase === "moving" ? `还剩 ${Math.max(0, (movementProgress?.total ?? rouletteResult?.total ?? 0) - (movementProgress?.current ?? 0))} 格` : phaseCopy[phase].title}</h2>
             <p>{arrivalNotice && ["resolving", "deciding", "rescue", "handoff"].includes(phase) ? `📍 ${arrivalNotice}` : `${currentPlayer.avatar} ${currentPlayer.name}${phase === "ready" ? "，到你啦！" : ""}`}</p>
           </div>
 
-          <div className="roulette-console twin-ball" aria-live="assertive" aria-label={phase === "spinning" ? "双球轮盘正在转动" : rouletteResult ? `两球点数 ${rouletteResult.first} 加 ${rouletteResult.second}` : "双球零到十二轮盘"}>
+          {rollInputMode === "electronic" ? <div className="roulette-console twin-ball" aria-live="assertive" aria-label={phase === "spinning" ? "双球轮盘正在转动" : rouletteResult ? `两球点数 ${rouletteResult.first} 加 ${rouletteResult.second}` : "双球零到十二轮盘"}>
             <div className="number-roulette physical-ring" aria-hidden="true">
               {Array.from({ length: 26 }, (_, index) => index % 13).map((number, index) => <span key={`${number}-${index}`} style={{ "--roulette-index": index } as React.CSSProperties}>{number}</span>)}
               <i className="gold-spinner"><b /><b /><b /><b /></i>
@@ -497,26 +521,37 @@ function ClassicWorldBoard(props: Parameters<typeof ImmersiveWorldBoard>[0]) {
             <strong className={phase === "spinning" ? "roulette-equation changing" : "roulette-equation"}>
               {phase === "spinning" ? "转动中…" : rouletteResult ? `${rouletteResult.first} + ${rouletteResult.second}${currentPlayer.isChild && phase === "answering" ? " = ?" : ` = ${rouletteResult.total}`}` : "? + ?"}
             </strong>
+          </div> : <div className="physical-roll-badge" aria-live="polite"><span>🎡</span><b>实体俄罗斯轮盘</b><small>{session.voiceEnabled ? "停在 0–24，报出或点击最终点数" : "停稳后点击最终点数 0–24"}</small></div>}
+
+          <div className="roll-mode-switch" aria-label="选择点数产生方式">
+            <button type="button" disabled={isBusy} className={rollInputMode === "electronic" ? "active" : ""} onClick={() => onRollInputModeChange("electronic")}>电子轮盘</button>
+            <button type="button" disabled={isBusy} className={rollInputMode === "physical" ? "active" : ""} onClick={() => onRollInputModeChange("physical")}>🎡 实体轮盘</button>
           </div>
 
-          <div className="classic-turn-actions">
+          {rollInputMode === "electronic" && <div className="classic-turn-actions">
             <button className="start-turn-button" type="button" onClick={onStartTurn} disabled={isBusy}>
               <span>{phase === "ready" ? "开始前进" : phase === "spinning" ? "双球滚动中" : phase === "answering" ? "等待回答" : phase === "moving" ? "旅行中" : phase === "resolving" ? "落点确认中" : "交接中"}</span>
               <b>{phase === "ready" ? "转动双球轮盘 →" : rouletteResult ? `${rouletteResult.first} + ${rouletteResult.second}${phase === "answering" ? " = ?" : ` = ${rouletteResult.total}`}` : "请稍候"}</b>
             </button>
             {isBusy && phase !== "answering" && <button className="skip-turn-animation" type="button" onClick={onSkipAnimation}>{phase === "spinning" ? "跳过轮盘动画" : phase === "moving" ? "跳过移动动画" : phase === "resolving" ? "立即显示结果" : phase === "handoff" ? "立即下一位" : "跳过动画"}</button>}
-          </div>
+          </div>}
+
+          {rollInputMode === "physical" && phase === "ready" && <div className="physical-roll-panel classic-physical-roll-panel">
+            <p><b>{session.voiceEnabled ? "轮盘停稳后，说“走 8 步”" : "轮盘停稳后，选择最终点数"}</b><small>{session.voiceEnabled ? "或点击最终点数 0–24" : "点击下方数字 0–24"}</small></p>
+            <div>{Array.from({ length: 25 }, (_, steps) => <button type="button" key={steps} onClick={() => onManualRoll(steps)}>{steps}</button>)}</div>
+          </div>}
+          {rollInputMode === "physical" && isBusy && phase !== "answering" && <button className="skip-turn-animation physical-skip-animation" type="button" onClick={onSkipAnimation}>{phase === "moving" ? "跳过移动动画" : phase === "resolving" ? "立即显示结果" : phase === "handoff" ? "立即下一位" : "跳过动画"}</button>}
 
           {phase === "answering" && (
             <div className="math-answer-panel classic-math-panel">
-              <p><b>{mathFeedback || `请让 ${currentPlayer.name} 回答`}</b><small>🎙️ {voiceStatus}</small></p>
-              <button className="retry-listen-button" type="button" onClick={onRetryAnswer}>重新开启麦克风</button>
+              <p><b>{mathFeedback || `请让 ${currentPlayer.name} 回答`}</b>{session.voiceEnabled && <small>🎙️ {voiceStatus}</small>}</p>
+              {session.voiceEnabled && <button className="retry-listen-button" type="button" onClick={onRetryAnswer}>重新开启麦克风</button>}
               <div>{Array.from({ length: 25 }, (_, answer) => <button type="button" key={answer} onClick={() => onAnswer(answer)}>{answer}</button>)}</div>
             </div>
           )}
 
           <button className={reducedMotion ? "motion-mode-toggle active" : "motion-mode-toggle"} type="button" onClick={() => onReducedMotionChange(!reducedMotion)} aria-pressed={reducedMotion}>{reducedMotion ? "✓ 已简化动效" : "简化动效"}</button>
-          <small className="classic-safety-note">每回合只生成一次公平随机点数</small>
+          <small className="classic-safety-note">{rollInputMode === "physical" ? "兼容家庭实体俄罗斯轮盘 · 提交后只移动一次" : "每回合只生成一次公平随机点数"}</small>
           {phase === "ready" && session.voiceEnabled && <em className="classic-voice-state">🎙️ {voiceStatus}</em>}
         </section>
       </section>
@@ -570,11 +605,19 @@ export function GameSessionScreen({
   const [financialAction, setFinancialAction] = useState<FinancialAction | null>(null);
   const [assetManagerOpen, setAssetManagerOpen] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [settlementCelebrationSkipped, setSettlementCelebrationSkipped] = useState(false);
   const [selectedRescuePlanId, setSelectedRescuePlanId] = useState<"least-loss" | "fewest-actions" | "keep-high-rent">("least-loss");
   const [rentFlight, setRentFlight] = useState<RentFlight | null>(null);
   const [propertyCelebration, setPropertyCelebration] = useState<PropertyCelebration | null>(null);
   const [undoSnapshot, setUndoSnapshot] = useState<UndoSnapshot | null>(null);
   const [activeCard, setActiveCard] = useState<CardResolution | null>(null);
+  const [knowledgeCity, setKnowledgeCity] = useState<CityTile | null>(null);
+  const [knowledgeExpanded, setKnowledgeExpanded] = useState(false);
+  const [challengeChoices, setChallengeChoices] = useState<TravelChallenge[]>([]);
+  const [activeChallenge, setActiveChallenge] = useState<TravelChallenge | null>(null);
+  const [challengeHint, setChallengeHint] = useState(false);
+  const [challengeFeedback, setChallengeFeedback] = useState("");
+  const [rollInputMode, setRollInputMode] = useState<RollInputMode>("electronic");
   const transitionTimerRef = useRef<number | null>(null);
   const spinTickerRef = useRef<number | null>(null);
   const voiceReminderRef = useRef<number | null>(null);
@@ -589,6 +632,8 @@ export function GameSessionScreen({
   const answerLockedRef = useRef(false);
   const lastEncouragementRef = useRef(-1);
   const submitMathAnswerRef = useRef<(answer: number) => void>(() => undefined);
+  const submitManualRollRef = useRef<(steps: number) => void>(() => undefined);
+  const rollInputModeRef = useRef<RollInputMode>("electronic");
   const sessionRef = useRef(session);
   const landingDecisionRef = useRef<LandingDecision | null>(null);
   const financialActionRef = useRef<FinancialAction | null>(null);
@@ -596,6 +641,9 @@ export function GameSessionScreen({
   const transactionGuardRef = useRef(false);
   const settledLandingKeyRef = useRef<string | null>(null);
   const activeCardRef = useRef<CardResolution | null>(null);
+  const learningHandoffRef = useRef<GameSession | null>(null);
+  const pendingKnowledgeCityRef = useRef<CityTile | null>(null);
+  const learningReturnFocusRef = useRef<HTMLElement | null>(null);
   const skipAnimationGuardRef = useRef(false);
   sessionRef.current = session;
   assetManagerOpenRef.current = assetManagerOpen;
@@ -603,12 +651,35 @@ export function GameSessionScreen({
   const currentColor = PLAYER_COLORS.find((item) => item.id === currentPlayer.color)?.hex ?? "#167f7b";
   const gameLength = GAME_LENGTHS.find((item) => item.id === session.gameLengthId) ?? GAME_LENGTHS[1];
   const economy = ECONOMY_PRESETS.find((item) => item.id === session.economyId) ?? ECONOMY_PRESETS[1];
+  const rentDifficulty = RENT_DIFFICULTIES.find((item) => item.id === session.rentDifficultyId) ?? RENT_DIFFICULTIES[1];
   const ranking = useMemo(() => createSettlementRanking(session.players), [session.players]);
+  const learningAwards = useMemo(() => createLearningAwards(session), [session]);
   const liveRank = new Map(ranking.map((entry) => [entry.player.id, entry.rank]));
   const currentAssets = calculateAssetBreakdown(currentPlayer);
   const narrationEnabled = session.voiceNarrationEnabled !== false;
   const inspectedPlayer = inspectedPlayerId ? session.players.find((player) => player.id === inspectedPlayerId) ?? null : null;
   const inspectedAssets = inspectedPlayer ? calculateAssetBreakdown(inspectedPlayer) : null;
+
+  useEffect(() => {
+    const savedMode = window.localStorage.getItem(ROLL_INPUT_MODE_KEY);
+    if (savedMode === "physical" || savedMode === "electronic") {
+      rollInputModeRef.current = savedMode;
+      setRollInputMode(savedMode);
+    }
+  }, []);
+
+  const changeRollInputMode = (mode: RollInputMode) => {
+    if (turnPhaseRef.current !== "ready") return;
+    rollInputModeRef.current = mode;
+    setRollInputMode(mode);
+    window.localStorage.setItem(ROLL_INPUT_MODE_KEY, mode);
+    setRouletteResult(null);
+    setVoiceStatus(mode === "physical" ? "请转动实体俄罗斯轮盘，停稳后报出 0 到 24" : "电子双球轮盘已就绪");
+    playUiSound("tap");
+    if (mode === "physical") {
+      speak("已切换实体俄罗斯轮盘。停稳后，请直接说走几步。", () => startVoiceListening("start", sessionRef.current));
+    }
+  };
 
   useEffect(() => {
     const updateNativeLayout = () => {
@@ -828,6 +899,21 @@ export function GameSessionScreen({
         setVoiceStatus(`听到：“${transcript}”`);
         setRecognizedTranscript(transcript);
         setVoiceVisualState("heard");
+        if (rollInputModeRef.current === "physical") {
+          const reportedSteps = alternatives.map(parseSpokenNumber).find((value): value is number => value !== null && value >= 0 && value <= 24);
+          if (reportedSteps !== undefined) {
+            stopVoiceListening();
+            submitManualRollRef.current(reportedSteps);
+            return;
+          }
+          if (alternatives.some((item) => /等|等等|等一下|稍等|等会/.test(item))) {
+            stopVoiceListening();
+            speak("好的，慢慢转，停稳后告诉我点数。", () => startVoiceListening("start", targetSession));
+            return;
+          }
+          speak("请告诉我轮盘最终点数，例如说，走八步。", () => startVoiceListening("start", targetSession));
+          return;
+        }
         if (alternatives.some((item) => /继续|前进|开始|走吧|出发|可以|好/.test(item))) {
           stopVoiceListening();
           beginTurn(targetSession);
@@ -946,7 +1032,14 @@ export function GameSessionScreen({
     const player = targetSession.players[targetSession.currentPlayerIndex];
     setRecognizedTranscript("");
     playUiSound("turn");
-    speak(targetSession.voiceEnabled ? `已经轮到${player.name}啦，是否继续？` : `已经轮到${player.name}啦，请点击开始前进。`, () => startVoiceListening("start", targetSession));
+    const announcement = rollInputMode === "physical"
+      ? targetSession.voiceEnabled
+        ? `已经轮到${player.name}啦。请转动实体俄罗斯轮盘，停稳后告诉我零到二十四的最终点数。`
+        : `已经轮到${player.name}啦。请转动实体俄罗斯轮盘，再点击最终点数。`
+      : targetSession.voiceEnabled
+        ? `已经轮到${player.name}啦，是否继续？`
+        : `已经轮到${player.name}啦，请点击开始前进。`;
+    speak(announcement, () => startVoiceListening("start", targetSession));
   };
 
   const startFinancialListening = (mode: "landing" | "confirm" | "assets", targetSession: GameSession, withCue = true) => {
@@ -1274,7 +1367,7 @@ export function GameSessionScreen({
 
   const resolveLanding = (originSession: GameSession, roll: number, quickly = false) => {
     clearTurnTimers();
-    const movedSession = movedSessionRef.current ?? moveActivePlayer(originSession, roll);
+    let movedSession = movedSessionRef.current ?? moveActivePlayer(originSession, roll);
     if (!movedSessionRef.current) {
       movedSessionRef.current = movedSession;
       onSessionChange(movedSession);
@@ -1315,6 +1408,13 @@ export function GameSessionScreen({
         speak(`${spokenArrivalSentence}${settlementCopy}。`, () => beginHandoff(settledSession, quickly));
         return;
       }
+      movedSession = recordCityVisit(movedSession, landingTile.id);
+      movedSessionRef.current = movedSession;
+      sessionRef.current = movedSession;
+      onSessionChange(movedSession);
+      const learning = migrateLearningState(movedSession);
+      const learnerStats = learning.players[activePlayer.id];
+      pendingKnowledgeCityRef.current = learning.knowledgeHintsEnabled && !learnerStats.viewedKnowledgeCityIds.includes(landingTile.id) ? landingTile : null;
       const ownership = getPropertyOwner(movedSession, landingTile.id);
       let decision: LandingDecision;
       if (!ownership) {
@@ -1404,6 +1504,34 @@ export function GameSessionScreen({
     transitionTimerRef.current = window.setTimeout(advanceOneTile, 180);
   };
 
+  const submitManualRoll = (steps: number) => {
+    if (rollInputMode !== "physical" || turnPhaseRef.current !== "ready" || dialog !== null) return;
+    if (!Number.isInteger(steps) || steps < 0 || steps > 24) {
+      setVoiceStatus("请输入实体轮盘停下后的 0 到 24");
+      playUiSound("remove");
+      return;
+    }
+    const originSession = sessionRef.current;
+    clearTurnTimers();
+    stopVoiceListening();
+    window.speechSynthesis?.cancel();
+    turnOriginRef.current = originSession;
+    pendingRollRef.current = { first: steps, second: 0, total: steps };
+    movedSessionRef.current = null;
+    settledLandingKeyRef.current = null;
+    answerLockedRef.current = true;
+    setMathFeedback("");
+    setArrivalNotice("");
+    setRouletteResult({ first: steps, second: 0, total: steps });
+    setMovementPosition(null);
+    setMovementProgress(null);
+    setVoiceStatus(`实体俄罗斯轮盘结果：${steps}，开始前进`);
+    setRecognizedTranscript(String(steps));
+    playUiSound("success");
+    beginMovement(originSession, steps);
+  };
+  submitManualRollRef.current = submitManualRoll;
+
   const submitMathAnswer = (answer: number) => {
     const roll = pendingRollRef.current;
     const originSession = turnOriginRef.current;
@@ -1433,12 +1561,13 @@ export function GameSessionScreen({
     const receiveRemoteAnswer = (event: Event) => {
       const answer = (event as CustomEvent<unknown>).detail;
       if (typeof answer === "number" && Number.isInteger(answer) && answer >= 0 && answer <= 24) {
-        submitMathAnswerRef.current(answer);
+        if (rollInputMode === "physical" && turnPhaseRef.current === "ready") submitManualRollRef.current(answer);
+        else submitMathAnswerRef.current(answer);
       }
     };
     window.addEventListener(REMOTE_ANSWER_EVENT, receiveRemoteAnswer);
     return () => window.removeEventListener(REMOTE_ANSWER_EVENT, receiveRemoteAnswer);
-  }, [remoteControlled]);
+  }, [remoteControlled, rollInputMode]);
 
   const retryMathListening = async () => {
     const roll = pendingRollRef.current;
@@ -1606,8 +1735,106 @@ export function GameSessionScreen({
     setFinancialAction(null);
     setAssetManagerOpen(false);
     movedSessionRef.current = completedSession;
-    beginHandoff(completedSession);
+    if (pendingKnowledgeCityRef.current) {
+      learningHandoffRef.current = completedSession;
+      setKnowledgeCity(pendingKnowledgeCityRef.current);
+      speak(`${pendingKnowledgeCityRef.current.name}，[[en:${pendingKnowledgeCityRef.current.englishName}]]。${pendingKnowledgeCityRef.current.knowledge}`);
+      pendingKnowledgeCityRef.current = null;
+      setKnowledgeExpanded(false);
+      changeTurnPhase("resolving");
+      return;
+    }
+    beginOptionalChallenge(completedSession);
   };
+
+  const beginOptionalChallenge = (completedSession: GameSession) => {
+    const player = completedSession.players[completedSession.currentPlayerIndex];
+    const ageBand = ageBandForPlayer(player.isChild, player.ageBand);
+    if (!ageBand || !shouldOfferChallenge(completedSession)) {
+      learningHandoffRef.current = null;
+      beginHandoff(completedSession);
+      return;
+    }
+    const learning = migrateLearningState(completedSession);
+    setChallengeChoices(challengesForAge(ageBand, learning.lastChallengeCategory));
+    setActiveChallenge(null);
+    setChallengeHint(false);
+    setChallengeFeedback("");
+    setKnowledgeCity(null);
+  };
+
+  const closeKnowledgeCard = (disableForGame = false) => {
+    const source = learningHandoffRef.current ?? sessionRef.current;
+    if (!knowledgeCity) return;
+    let nextSession = recordKnowledgeViewed(source, knowledgeCity.id);
+    if (disableForGame && nextSession.learning) nextSession = { ...nextSession, learning: { ...nextSession.learning, knowledgeHintsEnabled: false } };
+    sessionRef.current = nextSession;
+    movedSessionRef.current = nextSession;
+    onSessionChange(nextSession);
+    window.speechSynthesis?.cancel();
+    setKnowledgeCity(null);
+    beginOptionalChallenge(nextSession);
+  };
+
+  const chooseChallenge = (challenge: TravelChallenge) => {
+    setActiveChallenge(challenge);
+    setChallengeHint(false);
+    setChallengeFeedback("");
+    playUiSound("tap");
+  };
+
+  const answerChallenge = (answer: string) => {
+    if (!activeChallenge || challengeFeedback) return;
+    const correct = answer === activeChallenge.answer;
+    const source = learningHandoffRef.current ?? sessionRef.current;
+    const nextSession = recordChallenge(source, activeChallenge, correct);
+    learningHandoffRef.current = nextSession;
+    sessionRef.current = nextSession;
+    movedSessionRef.current = nextSession;
+    onSessionChange(nextSession);
+    setChallengeFeedback(correct ? `答对啦！${activeChallenge.explanation}` : `勇敢尝试就很棒！${activeChallenge.explanation}`);
+    playUiSound(correct ? "success" : "tap");
+  };
+
+  const revealChallengeAnswer = () => {
+    if (!activeChallenge || challengeFeedback) return;
+    const source = learningHandoffRef.current ?? sessionRef.current;
+    const nextSession = recordChallenge(source, activeChallenge, false);
+    learningHandoffRef.current = nextSession;
+    sessionRef.current = nextSession;
+    movedSessionRef.current = nextSession;
+    onSessionChange(nextSession);
+    setChallengeFeedback(`答案是 ${activeChallenge.answer}。${activeChallenge.explanation}`);
+  };
+
+  const finishChallenge = () => {
+    const source = learningHandoffRef.current ?? sessionRef.current;
+    setChallengeChoices([]);
+    setActiveChallenge(null);
+    setChallengeHint(false);
+    setChallengeFeedback("");
+    learningHandoffRef.current = null;
+    beginHandoff(source);
+  };
+
+  const learningDialogOpen = Boolean(knowledgeCity || challengeChoices.length > 0);
+  useEffect(() => {
+    if (learningDialogOpen) {
+      if (!learningReturnFocusRef.current && document.activeElement instanceof HTMLElement) {
+        learningReturnFocusRef.current = document.activeElement;
+      }
+      const timer = window.setTimeout(() => {
+        const selector = activeChallenge
+          ? ".travel-challenge-card .challenge-options button:not(:disabled)"
+          : ".learning-backdrop [role='dialog'] button:not(:disabled)";
+        document.querySelector<HTMLButtonElement>(selector)?.focus({ preventScroll: true });
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+    const returnTarget = learningReturnFocusRef.current;
+    learningReturnFocusRef.current = null;
+    if (returnTarget?.isConnected) window.setTimeout(() => returnTarget.focus({ preventScroll: true }), 0);
+  }, [learningDialogOpen, activeChallenge]);
 
   const executeFinancialAction = () => {
     if (transactionGuardRef.current) return;
@@ -1617,9 +1844,10 @@ export function GameSessionScreen({
     stopVoiceListening();
     const activeSession = sessionRef.current;
     const city = getCity(action.cityId);
-    const nextSession = action.kind === "purchase" && city ? purchaseCity(activeSession, city)
+    const transactionSession = action.kind === "purchase" && city ? purchaseCity(activeSession, city)
       : action.kind === "upgrade" && city ? upgradeCity(activeSession, city)
         : action.kind === "asset" ? applyAssetAction(activeSession, action.cityId, action.assetAction) : null;
+    const nextSession = transactionSession && action.kind === "upgrade" ? recordBuild(transactionSession) : transactionSession;
     if (!nextSession) {
       transactionGuardRef.current = false;
       financialActionRef.current = null;
@@ -1647,8 +1875,14 @@ export function GameSessionScreen({
     setLandingDecision(null);
     setPropertyCelebration(celebration);
     setVoiceStatus(celebration.title);
-    speak(`${celebration.title}${celebration.detail}`);
-    propertyCelebrationTimerRef.current = window.setTimeout(() => finishCityDecision(nextSession), reducedMotion ? 950 : 2400);
+    const finishAfterCelebration = () => {
+      if (propertyCelebrationTimerRef.current !== null) window.clearTimeout(propertyCelebrationTimerRef.current);
+      propertyCelebrationTimerRef.current = window.setTimeout(
+        () => finishCityDecision(nextSession),
+        reducedMotion ? 120 : 420,
+      );
+    };
+    speak(`${celebration.title}${celebration.detail}`, finishAfterCelebration);
   };
 
   const cancelFinancialAction = () => {
@@ -1691,11 +1925,12 @@ export function GameSessionScreen({
     const aid = applyFamilyAid(beforeAid, decision.rent);
     if (!aid) return;
     transactionGuardRef.current = true;
-    commitTransaction(beforeAid, aid.session, "领取家庭援助金");
-    movedSessionRef.current = aid.session;
+    const collaborativeSession = recordCollaboration(aid.session);
+    commitTransaction(beforeAid, collaborativeSession, "领取家庭援助金");
+    movedSessionRef.current = collaborativeSession;
     playUiSound("reward");
     transactionGuardRef.current = false;
-    speak(`家庭银行送来${aid.amount}金币援助金。现在可以安心支付租金，支付后还会保留基本旅行金。`, () => startFinancialListening("assets", aid.session));
+    speak(`家庭银行送来${aid.amount}金币援助金。现在可以安心支付租金，支付后还会保留基本旅行金。`, () => startFinancialListening("assets", collaborativeSession));
   };
 
   const undoLastTransaction = () => {
@@ -1790,6 +2025,15 @@ export function GameSessionScreen({
     setVoiceVisualState(nextSession.voiceEnabled ? "idle" : "off");
   };
 
+  const cycleRentDifficulty = () => {
+    const currentIndex = Math.max(0, RENT_DIFFICULTIES.findIndex((item) => item.id === rentDifficulty.id));
+    const nextDifficulty = RENT_DIFFICULTIES[(currentIndex + 1) % RENT_DIFFICULTIES.length];
+    const nextSession = { ...sessionRef.current, rentDifficultyId: nextDifficulty.id, updatedAt: Date.now() };
+    sessionRef.current = nextSession;
+    onSessionChange(nextSession);
+    playUiSound("tap");
+  };
+
   const toggleFullscreen = async () => {
     try {
       if (document.fullscreenElement) {
@@ -1847,6 +2091,14 @@ export function GameSessionScreen({
   useEffect(() => {
     const handleKeyboard = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (knowledgeCity) {
+          closeKnowledgeCard();
+          return;
+        }
+        if (challengeChoices.length > 0) {
+          finishChallenge();
+          return;
+        }
         if (inspectedPlayerId) {
           setInspectedPlayerId(null);
           return;
@@ -1863,7 +2115,7 @@ export function GameSessionScreen({
     return () => window.removeEventListener("keydown", handleKeyboard);
     // Handlers intentionally track the currently open help overlay.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rulesOpen, voiceGuideOpen, onboardingOpen, inspectedPlayerId]);
+  }, [rulesOpen, voiceGuideOpen, onboardingOpen, inspectedPlayerId, knowledgeCity, challengeChoices.length]);
 
   useEffect(() => {
     const closeRemoteOverlay = () => setInspectedPlayerId(null);
@@ -1883,6 +2135,7 @@ export function GameSessionScreen({
   const confirmSettlement = () => {
     if (turnPhaseRef.current !== "ready") skipTurnAnimation();
     playUiSound("success");
+    setSettlementCelebrationSkipped(false);
     setDialog("settlement");
   };
 
@@ -1906,7 +2159,7 @@ export function GameSessionScreen({
   const decisionCity = landingDecision ? getCity(landingDecision.cityId) : null;
   const decisionRegionName = decisionCity ? ({ asia: "亚洲", oceania: "大洋洲", africa: "非洲", europe: "欧洲", america: "美洲" } as const)[decisionCity.region] : "环球城市";
   const cashAfterPurchase = decisionCity ? currentPlayer.cash - decisionCity.price : currentPlayer.cash;
-  const baseRentVisits = decisionCity ? Math.max(1, Math.ceil(decisionCity.price / decisionCity.baseRent)) : 0;
+  const baseRentVisits = decisionCity ? Math.max(1, Math.ceil(decisionCity.price / (decisionCity.baseRent * economy.rentMultiplier * rentDifficulty.multiplier))) : 0;
   const purchaseRentSchedule = decisionCity ? Array.from({ length: 6 }, (_, level) => ({
     level,
     label: level === 0 ? "空地" : level === 5 ? "旅馆" : `${level} 座房屋`,
@@ -1943,7 +2196,7 @@ export function GameSessionScreen({
     : 0;
   const regionLabels = { asia: "亚洲", oceania: "大洋洲", africa: "非洲", europe: "欧洲", america: "美洲" } as const;
   const rulesCities = BOARD_TILES.filter((tile): tile is CityTile => tile.type === "city" && (rulesRegion === "all" || tile.region === rulesRegion));
-  const handbookRent = (city: CityTile, level: number) => Math.round(city.baseRent * [1, 2, 3.25, 5, 7.5, 10][level] * economy.rentMultiplier / 10) * 10;
+  const handbookRent = (city: CityTile, level: number) => Math.round(city.baseRent * [1, 2, 3.25, 5, 7.5, 10][level] * economy.rentMultiplier * rentDifficulty.multiplier / 10) * 10;
   const remoteGameState = JSON.stringify({
     players: session.players.map((player) => ({
       id: player.id,
@@ -2002,6 +2255,7 @@ export function GameSessionScreen({
             <button type="button" className={narrationEnabled ? "active" : ""} onClick={() => updateVoiceNarrationEnabled(!narrationEnabled)}><span>{narrationEnabled ? "📣" : "🔇"}</span><b>{narrationEnabled ? "播报开" : "播报关"}</b></button>
             <button type="button" className={musicEnabled ? "active" : ""} onClick={() => onMusicChange(!musicEnabled)}><span>{musicEnabled ? "♫" : "♪"}</span><b>{musicEnabled ? "音乐开" : "音乐关"}</b></button>
             <button type="button" className={effectsEnabled ? "active" : ""} onClick={() => onEffectsChange(!effectsEnabled)}><span>{effectsEnabled ? "🔔" : "🔕"}</span><b>{effectsEnabled ? "音效开" : "音效关"}</b></button>
+            <button type="button" className={rentDifficulty.id !== "standard" ? "active" : ""} onClick={cycleRentDifficulty}><span>🏨</span><b>租金 {rentDifficulty.name} ×{rentDifficulty.multiplier.toFixed(1)}</b></button>
             <button type="button" onClick={() => { setMobileToolsOpen(false); openAssetManager(); }}><span>🏦</span><b>查看资产</b></button>
             <button type="button" onClick={() => { setMobileToolsOpen(false); openRules("quick"); }}><span>📖</span><b>玩法规则</b></button>
             <button type="button" className="settlement" onClick={() => { setMobileToolsOpen(false); openSettlement(); }}><span>🏆</span><b>结算排行</b></button>
@@ -2131,6 +2385,37 @@ export function GameSessionScreen({
         </div>
       )}
 
+      {knowledgeCity && (
+        <div className="learning-backdrop" role="presentation">
+          <section className="city-knowledge-card" role="dialog" aria-modal="true" aria-labelledby="city-knowledge-title">
+            <header><span>{knowledgeCity.icon}</span><div><small>本次旅行新发现</small><h2 id="city-knowledge-title">认识 {knowledgeCity.name}</h2></div><button type="button" onClick={() => closeKnowledgeCard()} aria-label="关闭城市知识卡">×</button></header>
+            <div className="knowledge-location"><b>{knowledgeCity.country}，{knowledgeCity.continentName}</b><span>{knowledgeCity.englishName}</span></div>
+            <p>{knowledgeCity.knowledge}</p>
+            {knowledgeExpanded && <div className="knowledge-detail"><span>{knowledgeCity.landmark}</span><b>{knowledgeCity.greeting ?? `Hello from ${knowledgeCity.englishName}!`}</b><small>英文名只在知识卡和语音中出现，不会挤占地图方格。</small></div>}
+            <footer><button type="button" onClick={() => closeKnowledgeCard(true)}>本局不再提示</button><button type="button" onClick={() => setKnowledgeExpanded((value) => !value)}>{knowledgeExpanded ? "收起详情" : "展开一点"}</button><button className="primary" type="button" onClick={() => closeKnowledgeCard()}>知道了，继续 →</button></footer>
+          </section>
+        </div>
+      )}
+
+      {!knowledgeCity && challengeChoices.length > 0 && (
+        <div className="learning-backdrop" role="presentation">
+          <section className="travel-challenge-card" role="dialog" aria-modal="true" aria-labelledby="travel-challenge-title">
+            {!activeChallenge ? <>
+              <header><span>🧭</span><div><small>可选旅行挑战 · 不扣金币</small><h2 id="travel-challenge-title">挑一个喜欢的小任务</h2></div><button type="button" onClick={finishChallenge} aria-label="跳过旅行挑战">×</button></header>
+              <p>完成后收集一枚旅行印章；今天不想答也可以直接继续。</p>
+              <div className="challenge-category-grid">{challengeChoices.map((challenge) => { const label = LEARNING_CATEGORY_LABELS[challenge.category]; return <button type="button" key={challenge.id} onClick={() => chooseChallenge(challenge)}><span>{label.icon}</span><b>{label.name}</b><small>约 10 秒</small></button>; })}</div>
+              <footer><button type="button" onClick={finishChallenge}>这次跳过，继续旅行</button></footer>
+            </> : <>
+              <header><span>{LEARNING_CATEGORY_LABELS[activeChallenge.category].icon}</span><div><small>{LEARNING_CATEGORY_LABELS[activeChallenge.category].name}</small><h2 id="travel-challenge-title">{activeChallenge.prompt}</h2></div><button type="button" onClick={finishChallenge} aria-label="跳过旅行挑战">×</button></header>
+              <div className="challenge-options">{activeChallenge.options.map((option) => <button type="button" key={option} disabled={Boolean(challengeFeedback)} onClick={() => answerChallenge(option)}>{option}</button>)}</div>
+              {challengeHint && !challengeFeedback && <p className="challenge-hint">💡 {activeChallenge.hint}</p>}
+              {challengeFeedback && <p className="challenge-feedback">🌟 {challengeFeedback}<small>获得 1 枚旅行印章</small></p>}
+              <footer>{!challengeFeedback ? <><button type="button" onClick={() => setChallengeHint(true)}>给我一点提示</button><button type="button" onClick={revealChallengeAnswer}>看看答案</button><button type="button" onClick={finishChallenge}>跳过</button></> : <button className="primary" type="button" onClick={finishChallenge}>收下印章，继续 →</button>}</footer>
+            </>}
+          </section>
+        </div>
+      )}
+
       <section className="control-deck" id="game-top">
         <aside className="current-player-card">
           <span className="card-kicker">CURRENT TRAVELER</span>
@@ -2144,7 +2429,7 @@ export function GameSessionScreen({
             <span><small>建筑投入</small><b>¥{numberFormatter.format(currentAssets.buildingOriginalValue)}</b></span>
           </div>
           <button className="manage-assets-button" type="button" onClick={openAssetManager}>🏦 查看 / 管理我的资产</button>
-          <div className={`voice-ready state-${voiceVisualState}`}><i>{voiceVisualState === "speaking" ? "📣" : session.voiceEnabled ? "🎙️" : "🔕"}</i><span><b>{voiceVisualState === "speaking" ? "主持人正在播报" : voiceVisualState === "listening" ? "麦克风正在倾听" : voiceVisualState === "heard" ? "已经收到你的回答" : currentPlayer.isChild ? "小小数学家模式" : session.voiceEnabled ? "语音回复已准备" : narrationEnabled ? "仅语音回复已关闭" : "全部语音已关闭"}</b><small>{recognizedTranscript ? `最近听到：“${recognizedTranscript}”` : session.voiceEnabled ? voiceStatus : narrationEnabled ? "主持人仍会播报，请用按钮操作" : "所有流程仍可使用按钮操作"}</small></span><div className="voice-wave" aria-hidden="true"><em /><em /><em /><em /><em /></div><button className={session.voiceEnabled ? "microphone-on" : ""} type="button" aria-pressed={session.voiceEnabled} onClick={() => updateVoiceEnabled(!session.voiceEnabled)}>{session.voiceEnabled ? "关闭语音回复" : "打开语音回复"}</button></div>
+          {session.voiceEnabled && <div className={`voice-ready state-${voiceVisualState}`}><i>{voiceVisualState === "speaking" ? "📣" : "🎙️"}</i><span><b>{voiceVisualState === "speaking" ? "主持人正在播报" : voiceVisualState === "listening" ? "麦克风正在倾听" : voiceVisualState === "heard" ? "已经收到你的回答" : currentPlayer.isChild ? "小小数学家模式" : "语音回复已准备"}</b><small>{recognizedTranscript ? `最近听到：“${recognizedTranscript}”` : voiceStatus}</small></span><div className="voice-wave" aria-hidden="true"><em /><em /><em /><em /><em /></div><button className="microphone-on" type="button" aria-pressed="true" onClick={() => updateVoiceEnabled(false)}>关闭语音回复</button></div>}
           {effectiveTvMode && !televisionMode && <button className="tv-exit-button" type="button" onClick={() => setTvMode(false)}>退出电视布局</button>}
         </aside>
 
@@ -2162,7 +2447,10 @@ export function GameSessionScreen({
             voiceVisualState={voiceVisualState}
             arrivalNotice={arrivalNotice}
             reducedMotion={reducedMotion}
+            rollInputMode={rollInputMode}
             onStartTurn={() => beginTurn(sessionRef.current)}
+            onManualRoll={submitManualRoll}
+            onRollInputModeChange={changeRollInputMode}
             onAnswer={submitMathAnswer}
             onRetryAnswer={retryMathListening}
             onSkipAnimation={skipTurnAnimation}
@@ -2221,7 +2509,7 @@ export function GameSessionScreen({
 
             {rulesTab === "cities" && (
               <div className="rules-cities-content">
-                <div className="rules-city-toolbar"><span><b>{economy.name}租金</b><small>当前经济系数 × {economy.rentMultiplier}；临时卡牌加成不计入本表</small></span><div>{(["all", "asia", "oceania", "africa", "europe", "america"] as const).map((region) => <button className={rulesRegion === region ? "active" : ""} type="button" key={region} onClick={() => setRulesRegion(region)}>{region === "all" ? "全部" : regionLabels[region]}</button>)}</div></div>
+                <div className="rules-city-toolbar"><span><b>{economy.name} · {rentDifficulty.name}收费</b><small>旅费系数 ×{economy.rentMultiplier} × 地产强度 ×{rentDifficulty.multiplier}；临时卡牌加成不计入本表</small></span><div>{(["all", "asia", "oceania", "africa", "europe", "america"] as const).map((region) => <button className={rulesRegion === region ? "active" : ""} type="button" key={region} onClick={() => setRulesRegion(region)}>{region === "all" ? "全部" : regionLabels[region]}</button>)}</div></div>
                 <div className="city-rent-table-wrap" tabIndex={0} aria-label="可横向滚动的城市价格和租金表">
                   <table className="city-rent-table"><thead><tr><th>城市</th><th>购买价</th><th>每次建设</th><th>空地租金</th><th>1 房</th><th>2 房</th><th>3 房</th><th>4 房</th><th>旅馆</th></tr></thead><tbody>{rulesCities.map((city) => <tr key={city.id}><th><span>{city.icon}</span><b>{city.name}</b><small>{regionLabels[city.region]} · {city.country}</small></th><td>¥{numberFormatter.format(city.price)}</td><td>¥{numberFormatter.format(city.buildCost)}</td>{Array.from({ length: 6 }, (_, level) => <td className={level === 5 ? "hotel-rent" : ""} key={level}>¥{numberFormatter.format(handbookRent(city, level))}</td>)}</tr>)}</tbody></table>
                 </div>
@@ -2231,6 +2519,7 @@ export function GameSessionScreen({
 
             {rulesTab === "accessibility" && (
               <div className="rules-accessibility-content">
+                <div className="rent-difficulty-rules"><span><b>🏨 地产收费强度</b><small>游戏中可随时调整，下一笔租金立即生效</small></span><div>{RENT_DIFFICULTIES.map((difficulty) => <button className={rentDifficulty.id === difficulty.id ? "active" : ""} type="button" key={difficulty.id} onClick={() => { const nextSession = { ...sessionRef.current, rentDifficultyId: difficulty.id, updatedAt: Date.now() }; sessionRef.current = nextSession; onSessionChange(nextSession); playUiSound("tap"); }}><b>{difficulty.name}</b><small>×{difficulty.multiplier.toFixed(1)}</small></button>)}</div></div>
                 <div className="accessibility-setting-list"><button type="button" aria-pressed={musicEnabled} onClick={() => onMusicChange(!musicEnabled)}><span>{musicEnabled ? "♫" : "♪"}</span><p><b>背景音乐</b><small>{musicEnabled ? "已开启 · 欢乐旅行曲" : "已关闭 · 不影响事件提示"}</small></p><em>{musicEnabled ? "开启" : "关闭"}</em></button><button type="button" aria-pressed={effectsEnabled} onClick={() => onEffectsChange(!effectsEnabled)}><span>{effectsEnabled ? "🔔" : "🔕"}</span><p><b>游戏音效</b><small>{effectsEnabled ? "已开启 · 按钮和事件有反馈" : "已关闭 · 画面会完整显示结果"}</small></p><em>{effectsEnabled ? "开启" : "关闭"}</em></button><button type="button" aria-pressed={session.voiceEnabled} onClick={() => { if (!session.voiceEnabled) setRulesOpen(false); updateVoiceEnabled(!session.voiceEnabled); }}><span>{session.voiceEnabled ? "🎙️" : "🚫"}</span><p><b>语音回复</b><small>{session.voiceEnabled ? "已开启 · 可直接回答和选择" : "已关闭 · 主持仍会播报，请用按钮操作"}</small></p><em>{session.voiceEnabled ? "开启" : "关闭"}</em></button><button type="button" aria-pressed={narrationEnabled} onClick={() => updateVoiceNarrationEnabled(!narrationEnabled)}><span>{narrationEnabled ? "📣" : "🔇"}</span><p><b>语音播报</b><small>{narrationEnabled ? "已开启 · 主持人会点名和说明结果" : "已关闭 · 不影响麦克风回复设置"}</small></p><em>{narrationEnabled ? "开启" : "关闭"}</em></button><button type="button" aria-pressed={reducedMotion} onClick={() => changeReducedMotion(!reducedMotion)}><span>{reducedMotion ? "✓" : "✨"}</span><p><b>简化动态效果</b><small>{reducedMotion ? "已简化 · 轮盘与移动会更快" : "标准动画 · 仍可随时跳过"}</small></p><em>{reducedMotion ? "简化" : "标准"}</em></button></div>
                 <section className="accessibility-promises"><h3>全家都能看懂和操作</h3><div><article><span>◆</span><b>不只靠颜色</b><small>玩家归属同时显示头像、姓名、排名和文字标签。</small></article><article><span>⌨️</span><b>键盘可操作</b><small>Tab 切换按钮，Enter 或空格确认，Esc 关闭说明，? 打开规则。</small></article><article><span>👆</span><b>大触控热区</b><small>手机和平板上的关键按钮至少 48 像素，适合小朋友点击。</small></article><article><span>👁️</span><b>结果不只靠声音</b><small>语音、音乐或音效关闭时，点数、地点、金额与结果仍会显示。</small></article></div></section>
               </div>
@@ -2302,7 +2591,7 @@ export function GameSessionScreen({
                   </section>
                   <div className="city-investment-note"><span>💡</span><p><b>买下后能做什么？</b><small>城市会标记成你的颜色；其他玩家来访会自动交租，按基础租金计算约 {baseRentVisits} 次到访可覆盖买价，升级建筑还能提高租金。</small></p></div>
                   {currentPlayer.cash < decisionCity.price && <div className="cash-warning"><span>⚠️</span><p><b>现金暂时不足</b><small>还差 ¥{numberFormatter.format(decisionCity.price - currentPlayer.cash)}。可以先进入资产中心筹钱，也可以放弃本次机会。</small></p></div>}
-                  <div className={`economy-voice-hint state-${voiceVisualState}`}><i className="voice-pulse" /> <span><b>听到提示音后，说“我要购买”</b><small>{recognizedTranscript ? `刚刚听到：“${recognizedTranscript}”` : "单说“买”也可以 · 没听清会持续监听，不用点击"}</small></span></div>
+                  {session.voiceEnabled && <div className={`economy-voice-hint state-${voiceVisualState}`}><i className="voice-pulse" /> <span><b>听到提示音后，说“我要购买”</b><small>{recognizedTranscript ? `刚刚听到：“${recognizedTranscript}”` : "单说“买”也可以 · 没听清会持续监听，不用点击"}</small></span></div>}
                   <div className="economy-actions"><button className="economy-secondary" type="button" onClick={() => finishCityDecision()}><span>暂时不要</span><b>放弃购买</b></button><button className="economy-assets" type="button" onClick={openAssetManager}><span>现金不够？</span><b>管理资产</b></button><button className="economy-primary" type="button" onClick={() => requestPurchase(decisionCity.id)}><span>{currentPlayer.cash >= decisionCity.price ? "支付并获得地契" : "先筹钱再购买"}</span><b>购买 {decisionCity.name} →</b></button></div>
                 </>
               )}
@@ -2312,12 +2601,12 @@ export function GameSessionScreen({
                   <div className="building-level-view"><span>{Array.from({ length: 5 }, (_, index) => <i key={index} className={index < decisionProperty.buildingLevel ? "built" : ""}>{index === 4 ? "🏨" : "🏠"}</i>)}</span><b>{decisionProperty.mortgaged ? "城市已抵押" : decisionProperty.buildingLevel === 5 ? "已建成旅馆" : decisionProperty.buildingLevel === 0 ? "当前为空地" : `当前 ${decisionProperty.buildingLevel} 座房屋`}</b></div>
                   <div className="economy-stat-row"><span><small>本次升级</small><b>¥{numberFormatter.format(decisionCity.buildCost)}</b></span><span><small>当前租金</small><b>¥{numberFormatter.format(calculateRent(session, decisionCity, decisionProperty))}</b></span><span><small>升级后租金</small><b>{decisionProperty.buildingLevel < 5 && !decisionProperty.mortgaged ? `¥${numberFormatter.format(calculateRent(session, decisionCity, { ...decisionProperty, buildingLevel: (decisionProperty.buildingLevel + 1) as 1 | 2 | 3 | 4 | 5 }))}` : "—"}</b></span></div>
                   {decisionProperty.mortgaged && <div className="cash-warning"><span>⚠️</span><p><b>暂时不能升级</b><small>这座城市抵押中，需要先到资产中心赎回。</small></p></div>}
-                  <div className={`economy-voice-hint state-${voiceVisualState}`}><i className="voice-pulse" /><span><b>可以说“升级”或“结束”</b><small>{recognizedTranscript ? `刚刚听到：“${recognizedTranscript}”` : "语音没有听清时会自动继续等待"}</small></span></div>
+                  {session.voiceEnabled && <div className={`economy-voice-hint state-${voiceVisualState}`}><i className="voice-pulse" /><span><b>可以说“升级”或“结束”</b><small>{recognizedTranscript ? `刚刚听到：“${recognizedTranscript}”` : "语音没有听清时会自动继续等待"}</small></span></div>}
                   <div className="economy-actions"><button className="economy-secondary" type="button" onClick={() => finishCityDecision()}><b>结束回合</b></button><button className="economy-assets" type="button" onClick={openAssetManager}><b>管理资产</b></button><button className="economy-primary" type="button" disabled={decisionProperty.buildingLevel >= 5 || decisionProperty.mortgaged} onClick={() => requestUpgrade(decisionCity.id)}><b>升级建筑 →</b></button></div>
                 </>
               )}
 
-              {landingDecision.kind === "rent-paid" && <><div className="rent-result"><span>🪙</span><b>{landingDecision.rent > 0 ? `已向 ${landingDecision.ownerName} 支付 ¥${numberFormatter.format(landingDecision.rent)}` : "城市抵押中，本次免租"}</b><small>双方现金已经更新，并写入旅行动态。</small></div><div className="economy-voice-hint"><i className="voice-pulse" /><span><b>说“继续”进入下一位</b><small>主持人正在等待你的回答</small></span></div><div className="economy-actions single"><button className="economy-primary" type="button" onClick={() => finishCityDecision()}><b>完成本回合 →</b></button></div></>}
+              {landingDecision.kind === "rent-paid" && <><div className="rent-result"><span>🪙</span><b>{landingDecision.rent > 0 ? `已向 ${landingDecision.ownerName} 支付 ¥${numberFormatter.format(landingDecision.rent)}` : "城市抵押中，本次免租"}</b><small>双方现金已经更新，并写入旅行动态。</small></div>{session.voiceEnabled && <div className="economy-voice-hint"><i className="voice-pulse" /><span><b>说“继续”进入下一位</b><small>主持人正在等待你的回答</small></span></div>}<div className="economy-actions single"><button className="economy-primary" type="button" onClick={() => finishCityDecision()}><b>完成本回合 →</b></button></div></>}
 
               {landingDecision.kind === "rent-due" && <><div className="rent-result danger"><span>🛟</span><b>需向 {landingDecision.ownerName} 缴纳 ¥{numberFormatter.format(landingDecision.rent)}</b><small>当前现金 ¥{numberFormatter.format(currentPlayer.cash)}，还差 ¥{numberFormatter.format(Math.max(0, landingDecision.rent - currentPlayer.cash))}</small></div><div className="economy-actions single"><button className="economy-primary" type="button" onClick={openAssetManager}><b>打开资产自救中心 →</b></button></div></>}
               <footer>🎙️ {voiceStatus}</footer>
@@ -2389,8 +2678,8 @@ export function GameSessionScreen({
       )}
 
       {dialog === "settlement" && (
-        <div className="settlement-screen" role="dialog" aria-modal="true" aria-labelledby="winner-title">
-          <div className="confetti" aria-hidden="true">{Array.from({ length: 24 }, (_, index) => (
+        <div className={`settlement-screen${reducedMotion || settlementCelebrationSkipped ? " reduced-celebration" : ""}`} role="dialog" aria-modal="true" aria-labelledby="winner-title">
+          {!reducedMotion && !settlementCelebrationSkipped && <div className="confetti" aria-hidden="true">{Array.from({ length: 24 }, (_, index) => (
             <i
               key={index}
               style={{
@@ -2400,11 +2689,12 @@ export function GameSessionScreen({
                 "--confetti-color": `hsl(${index * 37} 88% 65%)`,
               } as React.CSSProperties}
             />
-          ))}</div>
+          ))}</div>}
           <div className="winner-banner">
             <span>🏆</span><small>{champions.length > 1 ? "共同冠军" : "本次环球冠军"}</small>
             <h2 id="winner-title">恭喜 {championNames}！</h2>
             <p>{champions.length > 1 ? "总资产和现金完全相同，今天的好运属于大家！" : "你带着最丰厚的旅行资产抵达终点！"}</p>
+            {!reducedMotion && !settlementCelebrationSkipped && <button className="settlement-skip-celebration" type="button" onClick={() => setSettlementCelebrationSkipped(true)}>跳过庆祝动画</button>}
           </div>
           <div className="ranking-table">
             <div className="ranking-head"><span>排名 / 旅行家</span><span>现金</span><span>城市原价</span><span>建筑投入</span><span>总资产</span></div>
@@ -2418,6 +2708,7 @@ export function GameSessionScreen({
               </article>
             ))}
           </div>
+          {learningAwards.length > 0 && <section className="learning-awards" aria-label="本局旅行奖项"><header><small>每一种成长都值得掌声</small><h3>旅行特别奖</h3></header><div>{learningAwards.map((award) => <article key={award.id}><span>{award.icon}</span><b>{award.title}</b><p>{award.playerIds.map((id) => { const player = session.players.find((candidate) => candidate.id === id); return player ? `${player.avatar} ${player.name}` : ""; }).filter(Boolean).join("、")}</p><small>{award.detail} · {award.value}</small></article>)}</div></section>}
           <div className="settlement-actions"><button type="button" onClick={continueAfterSettlement}>{settlementIsFinal ? "加赛继续玩" : "返回继续游戏"}</button><button type="button" className="finish-game" onClick={onEndGame}>结束本局 · 返回首页</button></div>
         </div>
       )}

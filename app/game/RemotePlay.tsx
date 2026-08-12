@@ -126,6 +126,8 @@ function clickButtonByText(pattern: RegExp) {
 
 function focusPrimaryAction() {
   return clickFirstVisible([
+    ".city-knowledge-card .primary:not(:disabled)",
+    ".travel-challenge-card .primary:not(:disabled)",
     ".player-assets-dialog > footer button:not(:disabled)",
     ".start-turn-button:not(:disabled)",
     ".economy-primary:not(:disabled)",
@@ -218,6 +220,8 @@ function runIntent(value: string) {
     continue: /继续|知道了|看完了|下一步|开始旅程|开始前进/,
     settlement: /结算|排行榜/,
     close: /关闭|返回|取消|稍后/,
+    hint: /提示/,
+    skip: /跳过|这次跳过/,
   };
   const pattern = intentPatterns[value];
   if (pattern && clickButtonByText(pattern)) return;
@@ -228,6 +232,8 @@ function runIntent(value: string) {
 function handleVoiceTranscript(transcript: string) {
   const answer = parseSpokenNumber(transcript);
   if (answer !== null && clickButtonByText(new RegExp(`^${answer}$`))) return;
+  const escaped = transcript.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (escaped && clickButtonByText(new RegExp(`^${escaped}$`))) return;
   if (/买|购买/.test(transcript)) runIntent("purchase");
   else if (/升级|建房|旅馆/.test(transcript)) runIntent("upgrade");
   else if (/资产|卖房|卖地|抵押|赎回/.test(transcript)) runIntent("assets");
@@ -235,6 +241,8 @@ function handleVoiceTranscript(transcript: string) {
   else if (/返回|取消|关闭|看完|知道了|^×$/.test(transcript)) runIntent("close");
   else if (/结算|排行/.test(transcript)) runIntent("settlement");
   else if (/继续|开始|出发|确认|确定|可以|好/.test(transcript)) runIntent("continue");
+  else if (/提示/.test(transcript)) runIntent("hint");
+  else if (/跳过/.test(transcript)) runIntent("skip");
 }
 
 function handleRemoteCommand(command: RemoteCommand) {
@@ -264,7 +272,9 @@ function readText(selectors: string[]) {
 }
 
 function collectUiState(): RemoteUiState {
-  const actions = Array.from(document.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"))
+  const activeLearningDialog = document.querySelector<HTMLElement>(".city-knowledge-card, .travel-challenge-card");
+  const actionRoot: ParentNode = activeLearningDialog ?? document;
+  const actions = Array.from(actionRoot.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"))
     .filter((button) => !button.closest("[data-remote-ui]") && isVisible(button))
     .map((button) => button.textContent?.replace(/\s+/g, " ").trim() ?? "")
     .filter(Boolean)
