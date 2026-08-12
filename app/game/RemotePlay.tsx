@@ -23,6 +23,24 @@ interface RemoteUiState {
   title: string;
   detail: string;
   actions: string[];
+  awaitingMathAnswer: boolean;
+  players: Array<{
+    id: string;
+    name: string;
+    avatar: string;
+    cash: number;
+    total: number;
+    cities: Array<{ name: string; icon: string; building: string; rent: number; mortgaged: boolean }>;
+  }>;
+  cityOffer: null | {
+    name: string;
+    icon: string;
+    price: number;
+    baseRent: number;
+    buildCost: number;
+    cashAfter: number;
+    kind: string;
+  };
 }
 
 type RemoteHostMessage = RemoteUiState | { type: "disconnected" };
@@ -64,6 +82,7 @@ const ROOM_STORAGE_KEY = "family-world-tour-tv-room";
 const AUTO_VOICE_STORAGE_KEY = "family-world-tour-remote-auto-voice";
 const PEER_PREFIX = "dafuweng-tv-";
 const REMOTE_ANSWER_EVENT = "family-world-tour-remote-answer";
+const REMOTE_CLOSE_OVERLAY_EVENT = "family-world-tour-remote-close-overlay";
 
 function createRoomCode() {
   const values = new Uint32Array(1);
@@ -107,6 +126,7 @@ function clickButtonByText(pattern: RegExp) {
 
 function focusPrimaryAction() {
   return clickFirstVisible([
+    ".player-assets-dialog > footer button:not(:disabled)",
     ".start-turn-button:not(:disabled)",
     ".economy-primary:not(:disabled)",
     ".family-card-face > button:not(:disabled)",
@@ -188,6 +208,7 @@ export function useTelevisionRemoteNavigation() {
 }
 
 function runIntent(value: string) {
+  if (value === "close" && clickFirstVisible(["[data-remote-close-player-assets]", ".player-assets-dialog > footer button:not(:disabled)"])) return;
   const intentPatterns: Record<string, RegExp> = {
     purchase: /购买|买下|确认购买/,
     upgrade: /升级|建房|建造/,
@@ -211,7 +232,7 @@ function handleVoiceTranscript(transcript: string) {
   else if (/升级|建房|旅馆/.test(transcript)) runIntent("upgrade");
   else if (/资产|卖房|卖地|抵押|赎回/.test(transcript)) runIntent("assets");
   else if (/放弃|不要|不用|结束/.test(transcript)) runIntent("giveup");
-  else if (/返回|取消|关闭/.test(transcript)) runIntent("close");
+  else if (/返回|取消|关闭|看完|知道了|^×$/.test(transcript)) runIntent("close");
   else if (/结算|排行/.test(transcript)) runIntent("settlement");
   else if (/继续|开始|出发|确认|确定|可以|好/.test(transcript)) runIntent("continue");
 }
@@ -222,7 +243,10 @@ function handleRemoteCommand(command: RemoteCommand) {
     if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) document.activeElement.click();
     else focusPrimaryAction();
   } else if (command.type === "primary") focusPrimaryAction();
-  else if (command.type === "back") window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  else if (command.type === "back") {
+    window.dispatchEvent(new CustomEvent(REMOTE_CLOSE_OVERLAY_EVENT));
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  }
   else if (command.type === "answer") {
     window.dispatchEvent(new CustomEvent(REMOTE_ANSWER_EVENT, { detail: command.value }));
   }
@@ -245,12 +269,23 @@ function collectUiState(): RemoteUiState {
     .map((button) => button.textContent?.replace(/\s+/g, " ").trim() ?? "")
     .filter(Boolean)
     .slice(0, 8);
+  const serializedGameState = document.querySelector<HTMLElement>("[data-remote-game-state]")?.dataset.remoteGameState;
+  let gameState: Pick<RemoteUiState, "players" | "cityOffer"> = { players: [], cityOffer: null };
+  if (serializedGameState) {
+    try {
+      gameState = JSON.parse(serializedGameState) as Pick<RemoteUiState, "players" | "cityOffer">;
+    } catch {
+      // Keep basic remote controls working if state serialization is unavailable.
+    }
+  }
   return {
     type: "state",
     activePlayer: readText([".current-player-card h1", ".rail-player.active .rail-name b"]),
     title: readText(["[role='dialog'] h2", ".classic-turn-copy h2", ".turn-phase-copy b", ".setup-section h2"]),
     detail: readText(["[role='dialog'] p", ".classic-turn-copy p", ".turn-phase-copy span", ".section-heading p"]),
     actions,
+    awaitingMathAnswer: Boolean(document.querySelector(".game-shell.phase-answering .math-answer-panel")),
+    ...gameState,
   };
 }
 
@@ -387,10 +422,13 @@ interface RemoteControllerScreenProps { roomCode: string; }
 
 export function RemoteControllerScreen({ roomCode }: RemoteControllerScreenProps) {
   const [status, setStatus] = useState<"connecting" | "connected" | "reconnecting" | "disconnected" | "error">("connecting");
-  const [uiState, setUiState] = useState<RemoteUiState>({ type: "state", activePlayer: "", title: "等待电视画面", detail: "", actions: [] });
+  const [uiState, setUiState] = useState<RemoteUiState>({ type: "state", activePlayer: "", title: "等待电视画面", detail: "", actions: [], awaitingMathAnswer: false, players: [], cityOffer: null });
+  const [assetPlayerId, setAssetPlayerId] = useState("");
+  const [assetViewerOpen, setAssetViewerOpen] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState("点麦克风后说：继续、购买、升级或数字答案");
   const [autoVoice, setAutoVoice] = useState(false);
   const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
+  const [answerDrawerOpen, setAnswerDrawerOpen] = useState(false);
   const connectionRef = useRef<DataConnection | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const autoVoiceRef = useRef(autoVoice);
@@ -398,6 +436,9 @@ export function RemoteControllerScreen({ roomCode }: RemoteControllerScreenProps
   const voiceRestartTimerRef = useRef<number | null>(null);
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
   const manuallyDisconnectedRef = useRef(false);
+  const answerDrawerRef = useRef<HTMLDetailsElement | null>(null);
+  const answerReturnScrollRef = useRef<number | null>(null);
+  const autoAnchoredAnswerRef = useRef(false);
 
   const clearVoiceRestart = () => {
     if (voiceRestartTimerRef.current !== null) window.clearTimeout(voiceRestartTimerRef.current);
@@ -607,16 +648,45 @@ export function RemoteControllerScreen({ roomCode }: RemoteControllerScreenProps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const shouldAnchor = uiState.awaitingMathAnswer && !microphoneEnabled;
+    if (shouldAnchor && !autoAnchoredAnswerRef.current) {
+      autoAnchoredAnswerRef.current = true;
+      answerReturnScrollRef.current = window.scrollY;
+      setAnswerDrawerOpen(true);
+      window.setTimeout(() => answerDrawerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+      return;
+    }
+    if (!uiState.awaitingMathAnswer && autoAnchoredAnswerRef.current) {
+      autoAnchoredAnswerRef.current = false;
+      setAnswerDrawerOpen(false);
+      const returnY = answerReturnScrollRef.current;
+      answerReturnScrollRef.current = null;
+      if (returnY !== null) window.setTimeout(() => window.scrollTo({ top: returnY, behavior: "smooth" }), 80);
+    }
+  }, [uiState.awaitingMathAnswer, microphoneEnabled]);
+
   const sendAnswer = (value: number) => {
     send({ type: "answer", value });
     setVoiceStatus(`已把答案 ${value} 发送到电视`);
   };
 
+  const selectedAssetPlayer = uiState.players.find((player) => player.id === assetPlayerId)
+    ?? uiState.players.find((player) => uiState.activePlayer.includes(player.name))
+    ?? uiState.players[0];
+
   return (
     <main className="iphone-remote-shell" data-remote-ui>
       <header className="iphone-remote-header"><span>🌍</span><div><small>环球大富翁 · iPhone 遥控器</small><b>{status === "connected" ? "已连接客厅电视" : status === "disconnected" ? "已断开电视" : status === "error" ? "暂时无法连接" : "正在连接电视…"}</b></div><i className={`state-${status}`} /></header>
       {status === "disconnected" && <section className="iphone-disconnected"><span>👋</span><div><b>手机已与电视断开</b><small>电视端可以重新显示二维码，之后仍可再次连接。</small></div><button type="button" onClick={() => window.location.reload()}>重新连接</button><button type="button" onClick={leaveController}>返回游戏首页</button></section>}
+      {uiState.players.length > 0 && <nav className="iphone-player-strip" aria-label="点击玩家查看资产">{uiState.players.map((player) => <button type="button" key={player.id} onClick={() => { setAssetPlayerId(player.id); setAssetViewerOpen(true); }}><span>{player.avatar}</span><b>{player.name}</b><small>¥{player.total.toLocaleString()}</small></button>)}</nav>}
       <section className="iphone-remote-now"><small>{uiState.activePlayer || "电视房间"}</small><h1>{uiState.title}</h1><p>{uiState.detail || `房间码 ${roomCode}`}</p></section>
+      {uiState.cityOffer && (
+        <section className="iphone-game-info" aria-label="玩家与城市资产信息">
+          {uiState.cityOffer && <article className="iphone-city-offer"><span>{uiState.cityOffer.icon}</span><div><small>{uiState.cityOffer.kind === "purchase" ? "当前购买机会" : "当前城市信息"}</small><b>{uiState.cityOffer.name}</b><p>售价 ¥{uiState.cityOffer.price.toLocaleString()} · 基础租金 ¥{uiState.cityOffer.baseRent.toLocaleString()} · 建设 ¥{uiState.cityOffer.buildCost.toLocaleString()}</p><em className={uiState.cityOffer.cashAfter < 0 ? "negative" : ""}>{uiState.cityOffer.cashAfter >= 0 ? `购买后剩余 ¥${uiState.cityOffer.cashAfter.toLocaleString()}` : `现金还差 ¥${Math.abs(uiState.cityOffer.cashAfter).toLocaleString()}`}</em></div></article>}
+        </section>
+      )}
+      {assetViewerOpen && selectedAssetPlayer && <div className="iphone-assets-backdrop" role="presentation" onClick={() => setAssetViewerOpen(false)}><section className="iphone-assets-dialog" role="dialog" aria-modal="true" aria-label={`${selectedAssetPlayer.name}的资产`} onClick={(event) => event.stopPropagation()}><header><span>{selectedAssetPlayer.avatar}</span><div><small>玩家资产</small><b>{selectedAssetPlayer.name}</b></div><button type="button" onClick={() => setAssetViewerOpen(false)} aria-label="关闭资产信息">×</button></header><div className="iphone-player-tabs">{uiState.players.map((player) => <button className={selectedAssetPlayer.id === player.id ? "active" : ""} type="button" key={player.id} onClick={() => setAssetPlayerId(player.id)}>{player.avatar} {player.name}</button>)}</div><article className="iphone-player-assets"><header><strong>总资产 ¥{selectedAssetPlayer.total.toLocaleString()}</strong></header><div className="iphone-asset-totals"><span><small>现金</small><b>¥{selectedAssetPlayer.cash.toLocaleString()}</b></span><span><small>城镇</small><b>{selectedAssetPlayer.cities.length} 座</b></span></div><div className="iphone-owned-cities">{selectedAssetPlayer.cities.length > 0 ? selectedAssetPlayer.cities.map((city) => <span key={city.name}><i>{city.icon}</i><b>{city.name}</b><small>{city.mortgaged ? "已抵押" : city.building} · 租金 ¥{city.rent.toLocaleString()}</small></span>) : <p>还没有城市资产</p>}</div></article></section></div>}
       <button className="iphone-remote-primary" type="button" onClick={() => send({ type: "primary" })}><span>当前主要操作</span><b>开始 / 继续 / 确认</b></button>
       <section className="iphone-remote-intents" aria-label="常用游戏操作"><button type="button" onClick={() => send({ type: "intent", value: "purchase" })}>🏙️ 购买</button><button type="button" onClick={() => send({ type: "intent", value: "upgrade" })}>🏠 升级</button><button type="button" onClick={() => send({ type: "intent", value: "assets" })}>💰 资产</button><button type="button" onClick={() => send({ type: "intent", value: "giveup" })}>↪ 放弃</button></section>
       <section className="iphone-remote-navigation" aria-label="电视遥控方向键"><button className="up" type="button" onClick={() => send({ type: "navigate", direction: "up" })}>▲</button><button className="left" type="button" onClick={() => send({ type: "navigate", direction: "left" })}>◀</button><button className="ok" type="button" onClick={() => send({ type: "activate" })}>确定</button><button className="right" type="button" onClick={() => send({ type: "navigate", direction: "right" })}>▶</button><button className="down" type="button" onClick={() => send({ type: "navigate", direction: "down" })}>▼</button></section>
@@ -627,7 +697,7 @@ export function RemoteControllerScreen({ roomCode }: RemoteControllerScreenProps
         <i aria-hidden="true" />
       </label>
       <p className="iphone-voice-status">{voiceStatus}</p>
-      <details className="iphone-answer-drawer"><summary>数字答案 0–24</summary><div>{Array.from({ length: 25 }, (_, value) => <button type="button" key={value} onClick={() => sendAnswer(value)}>{value}</button>)}</div></details>
+      <details ref={answerDrawerRef} className={uiState.awaitingMathAnswer && !microphoneEnabled ? "iphone-answer-drawer answering" : "iphone-answer-drawer"} open={answerDrawerOpen} onToggle={(event) => setAnswerDrawerOpen(event.currentTarget.open)}><summary>{uiState.awaitingMathAnswer ? "请选择计算出的数字 0–24" : "数字答案 0–24"}</summary><div>{Array.from({ length: 25 }, (_, value) => <button type="button" key={value} onClick={() => sendAnswer(value)}>{value}</button>)}</div></details>
       {uiState.actions.length > 0 && <section className="iphone-remote-actions"><small>电视当前可执行</small><div>{uiState.actions.map((action, index) => <button type="button" key={`${action}-${index}`} onClick={() => send({ type: "voice", transcript: action })}>{action}</button>)}</div></section>}
       <footer><span>房间 {roomCode.slice(0, 4)} {roomCode.slice(4)} · 电视与 iPhone 不传输画面，只同步操作</span>{status === "connected" && <button type="button" onClick={disconnect}>断开电视连接</button>}</footer>
     </main>

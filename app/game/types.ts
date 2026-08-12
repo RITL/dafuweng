@@ -52,6 +52,7 @@ export interface BaseTile {
 
 export interface CityTile extends BaseTile {
   type: "city";
+  englishName: string;
   country: string;
   region: RegionId;
   price: number;
@@ -150,6 +151,7 @@ export interface GameSession {
   id: string;
   economyId: EconomyPresetId;
   gameLengthId: GameLengthId;
+  voiceNarrationEnabled?: boolean;
   voiceEnabled: boolean;
   players: PlayerState[];
   currentPlayerIndex: number;

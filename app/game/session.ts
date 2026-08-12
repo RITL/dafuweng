@@ -102,6 +102,7 @@ export function createGameSession(
     id: makeId("game"),
     economyId,
     gameLengthId,
+    voiceNarrationEnabled: voiceEnabled,
     voiceEnabled,
     players,
     currentPlayerIndex,
@@ -219,6 +220,7 @@ export function loadGameSession(): GameSession | null {
     }
     return {
       ...parsed,
+      voiceNarrationEnabled: parsed.voiceNarrationEnabled ?? parsed.voiceEnabled,
       players: parsed.players.map((player) => ({
         ...player,
         isChild: player.isChild ?? false,

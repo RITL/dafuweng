@@ -58,6 +58,15 @@ export const GAME_LENGTHS: GameLength[] = [
   { id: "unlimited", name: "玩到尽兴", description: "不限轮数 · 随时结算", rounds: null },
 ];
 
+const CITY_ENGLISH_NAME_OVERRIDES: Record<string, string> = {
+  "ho-chi-minh": "Ho Chi Minh City",
+  washington: "Washington D.C.",
+  rio: "Rio de Janeiro",
+};
+
+const englishCityName = (id: string) => CITY_ENGLISH_NAME_OVERRIDES[id]
+  ?? id.split("-").map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`).join(" ");
+
 const city = (
   index: number,
   id: string,
@@ -71,6 +80,7 @@ const city = (
   index,
   type: "city",
   name,
+  englishName: englishCityName(id),
   shortLabel: name,
   country,
   region,

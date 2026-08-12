@@ -289,14 +289,35 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
   grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
   gap: 9px;
 }
-.rail-player { position: relative; min-height: 67px; padding: 9px 10px; display: flex; align-items: center; gap: 9px; border: 1px solid var(--line); border-radius: 17px; background: rgba(255,255,255,.7); transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease; overflow: hidden; }
+.rail-player { position: relative; min-height: 67px; padding: 9px 10px; display: flex; align-items: center; gap: 9px; border: 1px solid var(--line); border-radius: 17px; background: rgba(255,255,255,.7); transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease; overflow: hidden; cursor: pointer; }
 .rail-player::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--rail-color); opacity: .55; }
+.rail-player:hover { border-color: var(--rail-color); box-shadow: 0 8px 20px color-mix(in srgb, var(--rail-color) 13%, transparent); }
 .rail-player.active { transform: translateY(-2px); border-color: color-mix(in srgb, var(--rail-color) 55%, white); background: color-mix(in srgb, var(--rail-color) 8%, white); box-shadow: 0 10px 22px color-mix(in srgb, var(--rail-color) 15%, transparent); }
 .rail-avatar { width: 43px; height: 43px; flex: 0 0 43px; display: grid; place-items: center; border-radius: 14px; background: color-mix(in srgb, var(--rail-color) 15%, white); font-size: 25px; }
 .rail-name { min-width: 0; flex: 1; }.rail-name b, .rail-name small, .rail-money b, .rail-money small { display: block; }.rail-name b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }.rail-name small { margin-top: 3px; color: var(--muted); font-size: 8px; }
 .card-status-badges { display: block; margin-top: 3px; color: #6d579e; font-size: 6px; font-style: normal; font-weight: 900; white-space: nowrap; }
 .rail-money { text-align: right; }.rail-money small { color: var(--muted); font-size: 7px; }.rail-money b { margin-top: 3px; font-size: 10px; }
 .active-flag { position: absolute; top: 0; right: 0; padding: 3px 7px; border-radius: 0 16px 0 8px; background: var(--rail-color); color: #fff; font-style: normal; font-size: 7px; font-weight: 900; }
+
+.player-assets-backdrop { position: fixed; z-index: 180; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(18,43,45,.52); backdrop-filter: blur(7px); }
+.player-assets-dialog { width: min(680px,94vw); max-height: min(760px,92dvh); display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(22,127,123,.2); border-radius: 28px; background: #fffdf7; box-shadow: 0 28px 80px rgba(18,43,45,.3); }
+.player-assets-dialog > header { padding: 18px 20px; display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg,#e5f7f2,#fff8e9); }
+.player-assets-dialog > header > span { width: 54px; height: 54px; display: grid; place-items: center; flex: 0 0 54px; border-radius: 17px; background: #fff; font-size: 31px; }
+.player-assets-dialog > header > div { flex: 1; }.player-assets-dialog > header small { color: #168b86; font-size: 8px; font-weight: 900; letter-spacing: .16em; }.player-assets-dialog > header h2 { margin: 2px 0 0; font-size: 22px; }
+.player-assets-dialog > header > button { width: 38px; height: 38px; border: 0; border-radius: 12px; color: #234b4b; background: rgba(255,255,255,.8); font-size: 25px; }
+.player-assets-summary { padding: 16px 20px; display: grid; grid-template-columns: repeat(4,1fr); gap: 9px; }
+.player-assets-summary article { padding: 12px; border-radius: 15px; background: #f1f8f5; }.player-assets-summary small,.player-assets-summary b { display: block; }.player-assets-summary small { color: var(--muted); font-size: 8px; }.player-assets-summary b { margin-top: 4px; font-size: 15px; }
+.player-assets-city-list { min-height: 0; padding: 0 20px 16px; overflow-y: auto; }.player-assets-city-list h3 { margin: 2px 0 9px; font-size: 13px; }.player-assets-city-list h3 span { color: #168b86; }.player-assets-city-list > article { min-height: 55px; margin-top: 7px; padding: 8px 11px; display: flex; align-items: center; gap: 10px; border: 1px solid #e2ece8; border-radius: 14px; }.player-assets-city-list > article > span { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 11px; background: #f3f8f5; font-size: 22px; }.player-assets-city-list > article > div { min-width: 0; flex: 1; }.player-assets-city-list > article b,.player-assets-city-list > article small { display: block; }.player-assets-city-list > article b { font-size: 11px; }.player-assets-city-list > article small { margin-top: 3px; color: var(--muted); font-size: 8px; }.player-assets-city-list > article strong { font-size: 11px; }.player-assets-empty { padding: 24px; border-radius: 15px; color: var(--muted); background: #f5f7f5; text-align: center; font-size: 11px; }
+.player-assets-dialog > footer { padding: 12px 20px 17px; }.player-assets-dialog > footer button { width: 100%; min-height: 43px; border: 0; border-radius: 14px; color: #fff; background: #167f7b; font-weight: 900; }
+
+.property-celebration-backdrop { position: fixed; z-index: 185; inset: 0; display: grid; place-items: center; padding: 16px; pointer-events: none; background: radial-gradient(circle at 50% 45%,rgba(255,223,106,.24),transparent 27rem),rgba(10,43,42,.34); backdrop-filter: blur(3px); }
+.property-celebration-card { position: relative; width: min(520px,90vw); padding: 31px 27px 25px; overflow: hidden; border: 2px solid rgba(255,255,255,.92); border-radius: 30px; color: #244945; background: linear-gradient(145deg,#fffdf2,#eaf9f2); box-shadow: 0 30px 85px rgba(12,52,49,.34),0 0 0 8px rgba(255,215,94,.2); text-align: center; animation: propertyCelebrateIn .48s cubic-bezier(.18,1.3,.32,1) both; }
+.property-celebration-card > span { position: relative; display: block; font-size: 68px; line-height: 1; animation: propertyIconBounce .75s .15s ease both; }.property-celebration-card > small { position: relative; display: block; margin-top: 13px; color: #c28517; font-size: 8px; font-weight: 1000; letter-spacing: .2em; }.property-celebration-card h2 { position: relative; margin: 7px 0 5px; font-size: clamp(22px,4vw,31px); }.property-celebration-card p { position: relative; margin: 0 auto; max-width: 390px; color: #66807a; font-size: 10px; line-height: 1.65; }.property-celebration-card > div:last-child { position: relative; margin: 17px auto 0; padding: 9px 13px; display: inline-flex; align-items: center; gap: 10px; border-radius: 999px; color: #16786e; background: rgba(211,243,230,.8); font-size: 9px; }.property-celebration-card > div:last-child i { color: #e6ad31; font-style: normal; }
+.property-celebration-backdrop.kind-hotel .property-celebration-card { color: #5d4514; background: linear-gradient(145deg,#fff9d9,#ffe9af); box-shadow: 0 30px 90px rgba(106,72,13,.35),0 0 0 9px rgba(255,218,83,.25); }
+.property-confetti { position: absolute; inset: 0; }.property-confetti i { --angle: calc(var(--confetti-index) * 20deg); position: absolute; left: 50%; top: 35%; width: 7px; height: 13px; border-radius: 2px; background: hsl(calc(var(--confetti-index) * 43) 78% 57%); transform: rotate(var(--angle)); animation: propertyConfettiBurst 1.25s calc(var(--confetti-index) * 13ms) ease-out both; }
+@keyframes propertyCelebrateIn { from { opacity:0;transform:translateY(18px) scale(.72) rotate(-2deg) } 65% { transform:translateY(-4px) scale(1.035) rotate(.5deg) } to { opacity:1;transform:none } }
+@keyframes propertyIconBounce { from { opacity:0;transform:scale(.25) rotate(-18deg) } 55% { transform:scale(1.18) rotate(7deg) } to { opacity:1;transform:none } }
+@keyframes propertyConfettiBurst { from { opacity:1;transform:translate(0,0) rotate(var(--angle)) } to { opacity:0;transform:translate(calc(cos(var(--angle)) * 250px),calc(sin(var(--angle)) * 190px)) rotate(calc(var(--angle) + 520deg)) } }
 
 .control-deck { width: min(1540px, calc(100% - 40px)); min-height: calc(100vh - 190px); margin: 0 auto; display: grid; grid-template-columns: 238px minmax(720px, 1fr) 258px; gap: 14px; align-items: start; }
 .current-player-card, .board-stage, .journey-log { border: 1px solid rgba(22,56,63,.1); border-radius: 25px; background: rgba(255,253,247,.9); box-shadow: 0 18px 45px rgba(37,78,72,.09); }
@@ -628,6 +649,20 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
   .log-list { max-height: none; min-height: 0; flex: 1; }
 }
 
+/* 1280×800 一类中等横屏：保持完整顶部功能，但使用单行紧凑按钮，
+ * 避免工具栏文字换行后把按钮纵向拉长。 */
+@media (min-width: 1100px) and (max-width: 1450px) and (orientation: landscape) {
+  .game-topbar { grid-template-columns: minmax(210px,.78fr) auto minmax(560px,1.5fr); gap: 8px; }
+  .game-brand { gap: 8px; }.game-brand .brand-mark { width: 42px; height: 42px; border-radius: 13px; font-size: 24px; }.game-brand strong { font-size: 16px; }.game-brand small { font-size: 8px; }
+  .game-round-chip { min-width: 105px; gap: 4px; }.game-round-chip b { font-size: 27px; }.game-round-chip span,.game-round-chip small { font-size: 8px; }
+  .game-toolbar { min-width: 0; gap: 5px; white-space: nowrap; }
+  .autosave-state { margin-right: 1px; font-size: 7px; }
+  .game-icon-action,.game-text-action,.settle-button,.cast-button,.rules-button { height: 42px; min-height: 42px; line-height: 1; white-space: nowrap; }
+  .game-icon-action { width: 34px; min-width: 34px; font-size: 15px; }
+  .cast-button,.rules-button,.settle-button,.game-text-action { padding-right: 9px; padding-left: 9px; font-size: 8px; }
+  .undo-action { max-width: 66px; overflow: hidden; }
+}
+
 @media (min-width: 900px) and (orientation: landscape) {
   .game-shell.tv-mode .game-topbar, .game-shell.tv-mode .round-progress { display: none; }
   .game-shell.tv-mode .game-brand small, .game-shell.tv-mode .autosave-state, .game-shell.tv-mode .undo-action, .game-shell.tv-mode .game-toolbar > .game-text-action { display: none; }
@@ -867,6 +902,41 @@ html.tv-native-mirror .game-shell.tv-mode .classic-live-board {
 }
 html.tv-native-mirror .game-shell.tv-mode .classic-live-tile { grid-area: var(--mobile-grid-area) !important; }
 html.tv-native-mirror .game-shell.tv-mode .classic-board-center { grid-area: 2 / 2 / 10 / 24; }
+
+/* iPhone 12/13/14 Pro 等 390px 高横屏：不改变棋盘格数量或布局，只把
+ * 格子内部的图标和单行中文重新分配高度，避免文字行被裁成横线。 */
+@media (orientation: landscape) and (max-height: 430px) {
+  html.tv-native-mirror .game-shell.tv-mode .player-rail {
+    height: 38px;
+    min-height: 38px;
+    overflow: visible;
+  }
+  html.tv-native-mirror .game-shell.tv-mode .rail-player {
+    min-height: 36px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+  html.tv-native-mirror .game-shell.tv-mode .rail-player.active { transform: none; }
+  html.tv-native-mirror .game-shell.tv-mode .control-deck {
+    height: calc(100dvh - 42px - env(safe-area-inset-bottom));
+  }
+  html.tv-native-mirror .game-shell.tv-mode .classic-live-tile {
+    padding: 4px 1px 1px;
+    justify-content: center;
+  }
+  html.tv-native-mirror .game-shell.tv-mode .classic-live-tile::before { height: 3px; }
+  html.tv-native-mirror .game-shell.tv-mode .classic-tile-icon {
+    flex: 0 0 auto;
+    font-size: 11px;
+  }
+  html.tv-native-mirror .game-shell.tv-mode .classic-live-tile > b {
+    min-height: 7px;
+    margin-top: 1px;
+    flex: 0 0 auto;
+    font-size: 6px;
+    line-height: 1.15;
+  }
+}
 html.tv-native-mirror .game-shell.tv-mode .camera-status { width: 25%; padding: 7px 8px; }
 html.tv-native-mirror .game-shell.tv-mode .camera-mode,
 html.tv-native-mirror .game-shell.tv-mode .camera-status > small { font-size: 6px; }
@@ -903,8 +973,20 @@ html.tv-native-mirror .game-shell.tv-mode .math-answer-panel { position: static;
 html.tv-native-mirror .game-shell.tv-mode .math-answer-panel p { margin: 0; display: block; }
 html.tv-native-mirror .game-shell.tv-mode .math-answer-panel p b { font-size: 7px; }
 html.tv-native-mirror .game-shell.tv-mode .math-answer-panel p small { margin-top: 2px; display: block; font-size: 5px; }
-html.tv-native-mirror .game-shell.tv-mode .math-answer-panel .retry-listen-button,
-html.tv-native-mirror .game-shell.tv-mode .math-answer-panel > div { display: none; }
+html.tv-native-mirror .game-shell.tv-mode .math-answer-panel .retry-listen-button { display: none; }
+html.tv-native-mirror .game-shell.tv-mode .math-answer-panel > div {
+  margin-top: 4px;
+  display: grid;
+  grid-template-columns: repeat(13,minmax(0,1fr));
+  gap: 2px;
+}
+html.tv-native-mirror .game-shell.tv-mode .math-answer-panel > div button {
+  min-width: 0;
+  height: 22px;
+  min-height: 22px;
+  border-radius: 5px;
+  font-size: 7px;
+}
 html.tv-native-mirror .game-shell.tv-mode .journey-log {
   padding: 8px 6px;
   display: flex;
@@ -990,6 +1072,28 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
   html.tv-native-mirror .game-shell.tv-mode .journey-log .log-list article:nth-child(n+4) { display: none; }
 }
 .tv-rotate-prompt { display: none; }
+.mobile-tools-toggle {
+  display: block;
+  position: fixed;
+  z-index: 48;
+  top: max(5px, env(safe-area-inset-top));
+  right: max(7px, env(safe-area-inset-right));
+  min-width: 48px;
+  min-height: 30px;
+  padding: 0 10px;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.38);
+  border-radius: 9px;
+  background: rgba(20,101,96,.94);
+  box-shadow: 0 7px 18px rgba(33,18,16,.28);
+  font-size: 9px;
+  font-weight: 1000;
+}
+.mobile-tools-toggle.active { background:#c55b4d; }
+.mobile-game-tools { position:fixed;z-index:47;top:max(40px,calc(env(safe-area-inset-top) + 38px));right:max(7px,env(safe-area-inset-right));width:min(330px,calc(100vw - 14px - env(safe-area-inset-left) - env(safe-area-inset-right)));padding:8px;visibility:hidden;border:1px solid rgba(255,255,255,.68);border-radius:13px;color:#244b47;background:rgba(255,253,247,.97);box-shadow:0 18px 44px rgba(3,30,34,.4);backdrop-filter:blur(14px);opacity:0;transform:translateY(-10px) scale(.97);transform-origin:top right;transition:opacity .18s ease,transform .18s ease,visibility .18s; }
+.mobile-game-tools.open { visibility:visible;opacity:1;transform:none; }
+.mobile-game-tools>header { padding:1px 2px 7px;display:flex;align-items:center;justify-content:space-between; }.mobile-game-tools>header b { font-size:10px; }.mobile-game-tools>header button { width:25px;height:25px;border:0;border-radius:7px;color:#5b706b;background:#e8eeea;font-size:16px; }
+.mobile-game-tools>div { display:grid;grid-template-columns:repeat(3,1fr);gap:5px; }.mobile-game-tools>div>button { min-width:0;min-height:55px;padding:5px 3px;display:grid;place-items:center;align-content:center;gap:3px;border:1px solid #dce5df;border-radius:10px;color:#45625d;background:#fff; }.mobile-game-tools>div>button span { font-size:19px;line-height:1; }.mobile-game-tools>div>button b { font-size:7px; }.mobile-game-tools>div>button.active { color:#176b60;border-color:#8ac8b8;background:#eaf8f3; }.mobile-game-tools>div>button.settlement { color:#725018;border-color:#ebca76;background:#fff3cd; }
 @media (orientation: portrait) {
   html.tv-native-mirror .tv-rotate-prompt {
     position: fixed;
@@ -1102,6 +1206,9 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
   .game-shell:not(.tv-mode) .player-rail { width: calc(100% - 16px); margin: 8px auto; }
   .game-shell:not(.tv-mode) .control-deck { width: calc(100% - 16px); grid-template-columns: 14% minmax(0,1fr) 16%; gap: 8px; }
   .game-shell:not(.tv-mode) .board-stage { padding: 6px; }
+  .game-shell:not(.tv-mode) .player-rail { min-height: 76px; }
+  .game-shell:not(.tv-mode) .rail-player { min-height: 76px; }
+  .game-shell:not(.tv-mode) .control-deck { height: calc(100dvh - 167px); }
   .game-shell:not(.tv-mode) .current-player-card { padding: 18px 14px; border-radius: 18px; }
   .game-shell:not(.tv-mode) .journey-log { padding: 18px 14px; border-radius: 18px; }
   .game-shell:not(.tv-mode) .rail-avatar { width: 50px; height: 50px; flex-basis: 50px; font-size: 30px; }
@@ -1631,6 +1738,7 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
 .iphone-remote-header { min-height: 64px; padding: 10px 12px; display: grid; grid-template-columns: 46px minmax(0,1fr) 16px; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,.75); border-radius: 20px; background: rgba(255,255,255,.72); box-shadow: 0 10px 27px rgba(37,85,75,.1); backdrop-filter: blur(16px); }
 .iphone-remote-header > span { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 15px; background: #dff4ec; font-size: 27px; }
 .iphone-remote-header small,.iphone-remote-header b { display: block; }.iphone-remote-header small { color: #6d837d; font-size: 11px; }.iphone-remote-header b { margin-top: 3px; font-size: 16px; }
+.iphone-player-strip { margin-top:8px;display:flex;gap:6px;overflow-x:auto; }.iphone-player-strip button { min-width:88px;padding:7px 8px;display:grid;grid-template-columns:27px 1fr;grid-template-rows:auto auto;align-items:center;gap:1px 6px;border:1px solid #d6e3dc;border-radius:13px;color:#315650;background:rgba(255,255,255,.8);text-align:left; }.iphone-player-strip span { grid-row:1 / span 2;font-size:20px; }.iphone-player-strip b { overflow:hidden;font-size:9px;text-overflow:ellipsis;white-space:nowrap; }.iphone-player-strip small { color:#72857f;font-size:7px; }
 .iphone-remote-now { min-height: 123px; margin-top: 11px; padding: 19px; display: grid; place-content: center; border-radius: 22px; color: #fff; background: linear-gradient(135deg,#176f69,#123f49); box-shadow: 0 13px 31px rgba(17,75,70,.2); text-align: center; }
 .iphone-remote-now small { color: #aee5d7; font-size: 12px; font-weight: 1000; }.iphone-remote-now h1 { margin: 5px 0; font-size: clamp(23px,7vw,31px); line-height: 1.15; }.iphone-remote-now p { margin: 0; color: rgba(255,255,255,.7); font-size: 12px; }
 .iphone-remote-primary { width: 100%; min-height: 76px; margin-top: 11px; padding: 10px 19px; display: flex; align-items: center; justify-content: space-between; border: 0; border-radius: 21px; color: #4f3908; background: linear-gradient(135deg,#ffe28a,#ffc858); box-shadow: 0 12px 27px rgba(176,119,14,.21); text-align: left; }
@@ -1640,7 +1748,13 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
 .iphone-remote-secondary { margin-top: 7px; display: grid; grid-template-columns: .8fr 1.4fr; gap: 8px; }.iphone-remote-secondary button { min-height: 57px; border: 1px solid #d5e1da; border-radius: 17px; color: #355953; background: rgba(255,255,255,.78); font-size: 14px; font-weight: 1000; }.iphone-remote-secondary .iphone-voice-button { color: #fff; border: 0; background: linear-gradient(135deg,#16877d,#0e6662); }.iphone-remote-secondary .iphone-voice-button.microphone-on { background: linear-gradient(135deg,#ef745e,#c94f45); box-shadow:0 0 0 4px rgba(239,116,94,.14),0 10px 22px rgba(154,57,48,.18); }
 .iphone-auto-voice { margin-top: 8px; padding: 11px 13px; display: flex; align-items: center; gap: 12px; border: 1px solid #d8e4dc; border-radius: 17px; background: rgba(255,255,255,.76); cursor: pointer; }.iphone-auto-voice > span { min-width: 0; flex: 1; }.iphone-auto-voice b,.iphone-auto-voice small { display: block; }.iphone-auto-voice b { color: #315650; font-size: 13px; }.iphone-auto-voice small { margin-top: 3px; color: #74867f; font-size: 10px; line-height: 1.4; }.iphone-auto-voice input { position: absolute; opacity: 0; pointer-events: none; }.iphone-auto-voice > i { position: relative; width: 47px; height: 27px; flex: 0 0 47px; border-radius: 99px; background: #bdcbc5; transition: .2s ease; }.iphone-auto-voice > i::after { content: ""; position: absolute; left: 4px; top: 4px; width: 19px; height: 19px; border-radius: 50%; background: #fff; box-shadow: 0 2px 7px rgba(28,65,58,.24); transition: .2s ease; }.iphone-auto-voice.active { border-color: #9b86cf; background: #f4f0ff; }.iphone-auto-voice.active > i { background: #765ab2; }.iphone-auto-voice.active > i::after { transform: translateX(20px); }
 .iphone-voice-status { min-height: 36px; margin: 7px 3px 0; color: #677d77; font-size: 11px; line-height: 1.5; text-align: center; }
+.iphone-game-info { margin-top:10px;padding:10px;display:grid;gap:9px;border:1px solid #d5e3dc;border-radius:20px;background:rgba(255,255,255,.66); }
+.iphone-city-offer { padding:11px;display:flex;align-items:center;gap:11px;border:1px solid #edd18b;border-radius:15px;background:linear-gradient(135deg,#fff7d8,#fffdf4); }.iphone-city-offer>span { width:48px;height:48px;flex:0 0 48px;display:grid;place-items:center;border-radius:14px;background:#fff;font-size:29px; }.iphone-city-offer>div { min-width:0;flex:1; }.iphone-city-offer small,.iphone-city-offer b,.iphone-city-offer em { display:block; }.iphone-city-offer small { color:#9a7621;font-size:8px;font-weight:1000; }.iphone-city-offer b { margin-top:2px;font-size:16px; }.iphone-city-offer p { margin:3px 0;color:#6d735d;font-size:9px;line-height:1.45; }.iphone-city-offer em { color:#197865;font-size:10px;font-style:normal;font-weight:1000; }.iphone-city-offer em.negative { color:#c05243; }
+.iphone-player-tabs { display:flex;gap:5px;overflow-x:auto; }.iphone-player-tabs button { min-width:max-content;min-height:34px;padding:0 9px;border:1px solid #d5e1da;border-radius:10px;color:#58716b;background:#fff;font-size:9px;font-weight:900; }.iphone-player-tabs button.active { color:#fff;border-color:transparent;background:#187d70; }
+.iphone-player-assets { padding:12px;border-radius:15px;background:#fff; }.iphone-player-assets>header { display:flex;align-items:center;gap:9px; }.iphone-player-assets>header>span { width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:#e8f5ef;font-size:24px; }.iphone-player-assets>header>div { flex:1; }.iphone-player-assets>header small,.iphone-player-assets>header b { display:block; }.iphone-player-assets>header small { color:#80918c;font-size:7px; }.iphone-player-assets>header b { font-size:13px; }.iphone-player-assets>header strong { color:#176e63;font-size:11px; }.iphone-asset-totals { margin-top:9px;display:grid;grid-template-columns:1fr 1fr;gap:6px; }.iphone-asset-totals span { padding:8px;border-radius:10px;background:#edf6f1; }.iphone-asset-totals small,.iphone-asset-totals b { display:block; }.iphone-asset-totals small { color:#70857f;font-size:7px; }.iphone-asset-totals b { margin-top:2px;font-size:11px; }.iphone-owned-cities { margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:5px; }.iphone-owned-cities>span { min-width:0;padding:7px;display:grid;grid-template-columns:25px 1fr;gap:1px 6px;border:1px solid #e0e7e2;border-radius:10px;background:#fafcf9; }.iphone-owned-cities i { grid-row:1 / span 2;font-size:18px;font-style:normal; }.iphone-owned-cities b { overflow:hidden;font-size:9px;text-overflow:ellipsis;white-space:nowrap; }.iphone-owned-cities small { overflow:hidden;color:#758781;font-size:7px;text-overflow:ellipsis;white-space:nowrap; }.iphone-owned-cities p { grid-column:1 / -1;margin:5px;color:#7a8b86;font-size:9px;text-align:center; }
+.iphone-assets-backdrop { position:fixed;z-index:300;inset:0;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));display:grid;place-items:center;background:rgba(4,29,34,.78);backdrop-filter:blur(9px); }.iphone-assets-dialog { width:min(430px,100%);max-height:calc(100dvh - 24px);padding:13px;overflow-y:auto;border:1px solid rgba(255,255,255,.65);border-radius:21px;background:#f4f7f2;box-shadow:0 28px 70px rgba(0,20,26,.48); }.iphone-assets-dialog>header { padding:5px 3px 11px;display:flex;align-items:center;gap:9px; }.iphone-assets-dialog>header>span { width:45px;height:45px;display:grid;place-items:center;border-radius:14px;background:#dff3eb;font-size:27px; }.iphone-assets-dialog>header>div { min-width:0;flex:1; }.iphone-assets-dialog>header small,.iphone-assets-dialog>header b { display:block; }.iphone-assets-dialog>header small { color:#748780;font-size:8px; }.iphone-assets-dialog>header b { margin-top:2px;font-size:17px; }.iphone-assets-dialog>header>button { width:38px;height:38px;border:0;border-radius:11px;color:#526b65;background:#e4ebe7;font-size:22px; }.iphone-assets-dialog>.iphone-player-tabs { margin-bottom:8px; }
 .iphone-answer-drawer { margin-top: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,.75); border-radius: 18px; background: rgba(255,255,255,.65); }.iphone-answer-drawer summary { padding: 15px 17px; cursor: pointer; font-size: 14px; font-weight: 1000; }.iphone-answer-drawer > div { padding: 0 10px 12px; display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; }.iphone-answer-drawer button { min-height: 45px; border: 1px solid #d6e1db; border-radius: 12px; color: #28514c; background: #fff; font-size: 16px; font-weight: 1000; }
+.iphone-answer-drawer.answering { border-color: #efbd42; background: #fff7d9; box-shadow: 0 12px 30px rgba(190,135,17,.18); scroll-margin-block: 18px; }.iphone-answer-drawer.answering summary { color: #76510c; }
 .iphone-remote-actions { margin-top: 9px; padding: 12px; border-radius: 17px; background: rgba(255,255,255,.56); }.iphone-remote-actions > small { color: #758781; font-size: 10px; }.iphone-remote-actions > div { margin-top: 7px; display: flex; gap: 6px; overflow-x: auto; }.iphone-remote-actions button { min-width: 105px; min-height: 42px; padding: 5px 9px; border: 1px solid #d7e2dc; border-radius: 12px; background: #fff; font-size: 11px; font-weight: 900; }
 .iphone-disconnected { position: fixed; z-index: 5; inset: 0; padding: 24px; display: grid; place-content: center; grid-template-columns: minmax(0,360px); gap: 11px; color: #244d48; background: rgba(239,247,240,.97); text-align: center; }.iphone-disconnected > span { font-size: 52px; }.iphone-disconnected b,.iphone-disconnected small { display: block; }.iphone-disconnected b { font-size: 22px; }.iphone-disconnected small { margin-top: 7px; color: #71847d; font-size: 12px; line-height: 1.6; }.iphone-disconnected button { min-height: 52px; border: 1px solid #cbdcd3; border-radius: 15px; background: #fff; font-weight: 1000; }.iphone-disconnected button:first-of-type { margin-top: 7px; color: #fff; border: 0; background: #187d70; }
 .iphone-remote-shell > footer { padding: 14px 5px 2px; display: grid; justify-items: center; gap: 9px; color: #74847f; font-size: 10px; line-height: 1.5; text-align: center; }.iphone-remote-shell > footer button { min-height: 40px; padding: 0 16px; border: 1px solid #e1bbb4; border-radius: 12px; color: #98483a; background: rgba(255,255,255,.8); font-size: 11px; font-weight: 1000; }
@@ -1728,6 +1842,11 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
 }
 
 @media (orientation: landscape) and (max-height: 560px) {
+  .player-assets-backdrop { padding: 8px max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left)); }
+  .player-assets-dialog { width: min(760px,88vw); max-height: calc(100dvh - 16px); border-radius: 20px; }
+  .player-assets-dialog > header { padding: 9px 13px; }.player-assets-dialog > header > span { width: 40px; height: 40px; flex-basis: 40px; border-radius: 12px; font-size: 24px; }.player-assets-dialog > header h2 { font-size: 17px; }.player-assets-dialog > header > button { width: 32px; height: 32px; }
+  .player-assets-summary { padding: 8px 13px; gap: 6px; }.player-assets-summary article { padding: 7px 9px; border-radius: 10px; }.player-assets-summary b { font-size: 12px; }
+  .player-assets-city-list { padding: 0 13px 7px; }.player-assets-city-list h3 { margin-bottom: 4px; }.player-assets-city-list > article { min-height: 40px; margin-top: 4px; padding: 4px 8px; border-radius: 10px; }.player-assets-city-list > article > span { width: 30px; height: 30px; font-size: 18px; }.player-assets-dialog > footer { padding: 6px 13px 9px; }.player-assets-dialog > footer button { min-height: 34px; }
   .iphone-remote-shell { width: 100%; min-height: 100dvh; padding: max(7px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(7px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left)); display: grid; grid-template-columns: minmax(245px,.9fr) minmax(285px,1.1fr); grid-template-rows: auto auto auto auto; align-content: start; gap: 7px 10px; overflow-y: auto; }
   .iphone-remote-header { grid-column: 1 / -1; min-height: 48px; padding: 5px 9px; border-radius: 15px; }.iphone-remote-header > span { width: 38px; height: 38px; border-radius: 12px; font-size: 22px; }.iphone-remote-header small { font-size: 9px; }.iphone-remote-header b { margin-top: 1px; font-size: 13px; }
   .iphone-remote-now { grid-column: 1; grid-row: 2; min-height: 82px; padding: 10px; border-radius: 16px; }.iphone-remote-now h1 { margin: 2px 0; font-size: 20px; }
@@ -1735,8 +1854,8 @@ html.tv-native-mirror .game-shell.tv-mode .cast-guide-dialog {
   .iphone-remote-intents { grid-column: 1; grid-row: 4; }.iphone-remote-intents button { min-height: 48px; border-radius: 13px; font-size: 11px; }
   .iphone-remote-navigation { grid-column: 2; grid-row: 2 / span 2; width: min(100%,270px); height: 149px; margin: 0 auto; }.iphone-remote-navigation button { border-radius: 14px; }
   .iphone-remote-secondary { grid-column: 2; grid-row: 4; }
-  .iphone-auto-voice,.iphone-voice-status,.iphone-answer-drawer,.iphone-remote-actions,.iphone-remote-shell > footer { grid-column: 1 / -1; }
-  .iphone-remote-header,.iphone-remote-now,.iphone-remote-primary,.iphone-remote-intents,.iphone-remote-secondary,.iphone-auto-voice,.iphone-voice-status,.iphone-answer-drawer,.iphone-remote-actions,.iphone-remote-shell > footer { margin-top: 0; }
+  .iphone-game-info,.iphone-auto-voice,.iphone-voice-status,.iphone-answer-drawer,.iphone-remote-actions,.iphone-remote-shell > footer { grid-column: 1 / -1; }
+  .iphone-remote-header,.iphone-remote-now,.iphone-remote-primary,.iphone-remote-intents,.iphone-remote-secondary,.iphone-game-info,.iphone-auto-voice,.iphone-voice-status,.iphone-answer-drawer,.iphone-remote-actions,.iphone-remote-shell > footer { margin-top: 0; }
 }
 
 @media (max-width: 680px) and (orientation: landscape) and (max-height: 560px) {

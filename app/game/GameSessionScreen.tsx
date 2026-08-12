@@ -54,6 +54,13 @@ interface RentFlight {
   amount: number;
 }
 
+interface PropertyCelebration {
+  kind: "purchase" | "upgrade" | "hotel";
+  icon: string;
+  title: string;
+  detail: string;
+}
+
 interface GameSessionScreenProps {
   session: GameSession;
   isFresh: boolean;
@@ -77,6 +84,33 @@ const VOICE_WAIT_REMINDER_MS = 15000;
 const VOICE_GUIDE_KEY = "family-world-tour-voice-guide-v1";
 const ONBOARDING_KEY = "family-world-tour-onboarding-v1";
 const REMOTE_ANSWER_EVENT = "family-world-tour-remote-answer";
+const REMOTE_CLOSE_OVERLAY_EVENT = "family-world-tour-remote-close-overlay";
+const MATH_ENCOURAGEMENTS = [
+  "没关系，可以动动小手指数一数。",
+  "已经很接近啦，看看两个小球，慢慢加起来。",
+  "别着急，再试一次就好。",
+  "你一定可以的，把第一个数放在心里，再接着数。",
+  "小脑袋正在变聪明，再认真看一眼。",
+  "先找到大一点的数，再往后数几步。",
+  "可以把两个数字分成两小堆，再合在一起。",
+  "伸出手指帮帮忙，答案很快就出来啦。",
+  "看看左边的小球，再加上右边的小球。",
+  "慢一点没关系，认真算比算得快更厉害。",
+  "勇敢回答就已经很棒了，我们再算一次。",
+  "每试一次都离答案更近一点。",
+  "先深呼吸一下，你肯定能找到答案。",
+  "可以轻轻念出两个数字，再把它们加起来。",
+  "想想从第一个数字出发，还要向前走几步。",
+  "小手准备好了吗？一个一个接着数。",
+  "这次换一种方法，答案也许马上就出现了。",
+  "不用担心答错，数学就是这样慢慢学会的。",
+  "观察得再仔细一点，两个小球都在帮你。",
+  "你刚才已经完成了一大半，再试一下。",
+  "先算容易的部分，再把剩下的加上去。",
+  "相信自己的小脑袋，这道题难不住你。",
+  "好答案值得多想一会儿，我们继续。",
+  "数一数轮盘上的点数，再把两边合起来。",
+];
 
 type VoiceVisualState = "idle" | "requesting" | "speaking" | "listening" | "heard" | "error" | "unsupported" | "off";
 
@@ -522,6 +556,8 @@ export function GameSessionScreen({
   const [tvMode, setTvMode] = useState(televisionMode);
   const effectiveTvMode = televisionMode || tvMode;
   const [nativeTouchLayout, setNativeTouchLayout] = useState(false);
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
+  const [inspectedPlayerId, setInspectedPlayerId] = useState<string | null>(null);
   const [largeScreenScale, setLargeScreenScale] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
@@ -536,12 +572,14 @@ export function GameSessionScreen({
   const [reducedMotion, setReducedMotion] = useState(false);
   const [selectedRescuePlanId, setSelectedRescuePlanId] = useState<"least-loss" | "fewest-actions" | "keep-high-rent">("least-loss");
   const [rentFlight, setRentFlight] = useState<RentFlight | null>(null);
+  const [propertyCelebration, setPropertyCelebration] = useState<PropertyCelebration | null>(null);
   const [undoSnapshot, setUndoSnapshot] = useState<UndoSnapshot | null>(null);
   const [activeCard, setActiveCard] = useState<CardResolution | null>(null);
   const transitionTimerRef = useRef<number | null>(null);
   const spinTickerRef = useRef<number | null>(null);
   const voiceReminderRef = useRef<number | null>(null);
   const rentFlightTimerRef = useRef<number | null>(null);
+  const propertyCelebrationTimerRef = useRef<number | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const turnPhaseRef = useRef<TurnPhase>("ready");
   const turnOriginRef = useRef<GameSession | null>(null);
@@ -549,6 +587,7 @@ export function GameSessionScreen({
   const movedSessionRef = useRef<GameSession | null>(null);
   const handoffSessionRef = useRef<GameSession | null>(null);
   const answerLockedRef = useRef(false);
+  const lastEncouragementRef = useRef(-1);
   const submitMathAnswerRef = useRef<(answer: number) => void>(() => undefined);
   const sessionRef = useRef(session);
   const landingDecisionRef = useRef<LandingDecision | null>(null);
@@ -567,6 +606,9 @@ export function GameSessionScreen({
   const ranking = useMemo(() => createSettlementRanking(session.players), [session.players]);
   const liveRank = new Map(ranking.map((entry) => [entry.player.id, entry.rank]));
   const currentAssets = calculateAssetBreakdown(currentPlayer);
+  const narrationEnabled = session.voiceNarrationEnabled !== false;
+  const inspectedPlayer = inspectedPlayerId ? session.players.find((player) => player.id === inspectedPlayerId) ?? null : null;
+  const inspectedAssets = inspectedPlayer ? calculateAssetBreakdown(inspectedPlayer) : null;
 
   useEffect(() => {
     const updateNativeLayout = () => {
@@ -669,6 +711,11 @@ export function GameSessionScreen({
 
   const speak = (text: string, onEnd?: () => void) => {
     stopVoiceListening();
+    if (sessionRef.current.voiceNarrationEnabled === false) {
+      setVoiceVisualState(sessionRef.current.voiceEnabled ? "idle" : "off");
+      onEnd?.();
+      return;
+    }
     if (typeof window === "undefined" || !("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
       setVoiceStatus("此设备不支持语音，可使用按钮");
       setVoiceVisualState("unsupported");
@@ -676,26 +723,44 @@ export function GameSessionScreen({
       return;
     }
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "zh-CN";
-    utterance.rate = 0.92;
-    utterance.pitch = 1.08;
-    utterance.volume = 1;
-    utterance.onstart = () => {
-      setVoiceStatus("主持人正在说话");
-      setVoiceVisualState("speaking");
-    };
-    utterance.onend = () => {
-      if (!onEnd) setVoiceVisualState("idle");
+    const rawSegments = text.split(/\[\[en:(.*?)\]\]/g);
+    const segments = rawSegments.map((copy, index) => ({ copy: copy.trim(), lang: index % 2 === 1 ? "en-US" : "zh-CN" })).filter((segment) => segment.copy);
+    let segmentIndex = 0;
+    let finished = false;
+    const finishSpeaking = (failed = false) => {
+      if (finished) return;
+      finished = true;
+      setVoiceVisualState(failed ? "error" : "idle");
+      if (failed) setVoiceStatus("语音播报失败，可使用按钮");
       onEnd?.();
     };
-    utterance.onerror = () => {
-      setVoiceStatus("语音播报失败，可使用按钮");
-      setVoiceVisualState("error");
-      onEnd?.();
+    const speakNextSegment = () => {
+      const segment = segments[segmentIndex++];
+      if (!segment) {
+        finishSpeaking();
+        return;
+      }
+      const utterance = new SpeechSynthesisUtterance(segment.copy);
+      utterance.lang = segment.lang;
+      utterance.rate = segment.lang === "en-US" ? 0.82 : 0.92;
+      utterance.pitch = segment.lang === "en-US" ? 1 : 1.08;
+      utterance.volume = 1;
+      utterance.onstart = () => {
+        setVoiceStatus(segment.lang === "en-US" ? "正在练习城市英文名" : "主持人正在说话");
+        setVoiceVisualState("speaking");
+      };
+      utterance.onend = speakNextSegment;
+      utterance.onerror = () => finishSpeaking(true);
+      window.speechSynthesis.speak(utterance);
     };
-    window.speechSynthesis.speak(utterance);
+    speakNextSegment();
   };
+
+  const spokenCityName = (city: CityTile) => `${city.name}，[[en:${city.englishName}]]`;
+
+  const mathQuestionCopy = (roll: RouletteResult, targetSession: GameSession, lead = "") => targetSession.voiceEnabled
+    ? `${lead}${roll.first}加${roll.second}等于多少？请说出答案。没反应时，可以在答案后面说完毕。`
+    : `${lead}${roll.first}加${roll.second}等于多少？请选择你计算出的数字。`;
 
   const startVoiceListening = (mode: "start" | "answer", targetSession: GameSession, withCue = true) => {
     if (document.visibilityState !== "visible") {
@@ -872,8 +937,8 @@ export function GameSessionScreen({
   };
 
   const announceTurn = (targetSession: GameSession) => {
-    if (!targetSession.voiceEnabled || turnPhaseRef.current !== "ready") {
-      setVoiceStatus(targetSession.voiceEnabled ? "准备就绪" : "语音已关闭");
+    if (turnPhaseRef.current !== "ready") {
+      setVoiceStatus("准备就绪");
       setVoiceVisualState(targetSession.voiceEnabled ? "idle" : "off");
       return;
     }
@@ -881,7 +946,7 @@ export function GameSessionScreen({
     const player = targetSession.players[targetSession.currentPlayerIndex];
     setRecognizedTranscript("");
     playUiSound("turn");
-    speak(`已经轮到${player.name}啦，是否继续？`, () => startVoiceListening("start", targetSession));
+    speak(targetSession.voiceEnabled ? `已经轮到${player.name}啦，是否继续？` : `已经轮到${player.name}啦，请点击开始前进。`, () => startVoiceListening("start", targetSession));
   };
 
   const startFinancialListening = (mode: "landing" | "confirm" | "assets", targetSession: GameSession, withCue = true) => {
@@ -1078,7 +1143,7 @@ export function GameSessionScreen({
     sessionRef.current = silentSession;
     onSessionChange(silentSession);
     setVoiceGuideOpen(false);
-    setVoiceStatus("语音主持已关闭，可随时从设置重新开启");
+    setVoiceStatus("语音回复已关闭，可随时从功能区重新开启");
     setVoiceVisualState("off");
   };
 
@@ -1099,6 +1164,7 @@ export function GameSessionScreen({
     if (spinTickerRef.current !== null) window.clearInterval(spinTickerRef.current);
     if (voiceReminderRef.current !== null) window.clearTimeout(voiceReminderRef.current);
     if (rentFlightTimerRef.current !== null) window.clearTimeout(rentFlightTimerRef.current);
+    if (propertyCelebrationTimerRef.current !== null) window.clearTimeout(propertyCelebrationTimerRef.current);
     stopVoiceListening();
     window.speechSynthesis?.cancel();
   }, []);
@@ -1203,8 +1269,7 @@ export function GameSessionScreen({
     const scheduleClose = () => {
       transitionTimerRef.current = window.setTimeout(() => finishCardResult(resolution), quickly || reducedMotion ? 1800 : 6500);
     };
-    if (resolution.session.voiceEnabled) speak(spoken, scheduleClose);
-    else scheduleClose();
+    speak(spoken, scheduleClose);
   };
 
   const resolveLanding = (originSession: GameSession, roll: number, quickly = false) => {
@@ -1227,6 +1292,11 @@ export function GameSessionScreen({
       const arrivalSentence = roll === 0
         ? `${activePlayer.name}走了0步，仍然停留在${landingTile.name}`
         : `${activePlayer.name}走了${roll}步，来到了${landingTile.name}`;
+      const spokenArrivalSentence = landingTile.type === "city"
+        ? roll === 0
+          ? `${activePlayer.name}走了0步，仍然停留在${spokenCityName(landingTile)}`
+          : `${activePlayer.name}走了${roll}步，来到了${spokenCityName(landingTile)}`
+        : arrivalSentence;
       setArrivalNotice(arrivalSentence);
       setVoiceStatus(arrivalSentence);
       if (landingTile.type === "chance" || landingTile.type === "destiny") {
@@ -1242,8 +1312,7 @@ export function GameSessionScreen({
           playUiSound(bankResult.kind === "fee" ? "remove" : "reward");
         }
         const settlementCopy = bankResult.kind === "none" ? "" : `。${bankResult.message}`;
-        if (settledSession.voiceEnabled) speak(`${arrivalSentence}${settlementCopy}。`, () => beginHandoff(settledSession, quickly));
-        else beginHandoff(settledSession, quickly);
+        speak(`${spokenArrivalSentence}${settlementCopy}。`, () => beginHandoff(settledSession, quickly));
         return;
       }
       const ownership = getPropertyOwner(movedSession, landingTile.id);
@@ -1253,13 +1322,13 @@ export function GameSessionScreen({
         landingDecisionRef.current = decision;
         setLandingDecision(decision);
         changeTurnPhase("deciding");
-        if (movedSession.voiceEnabled) speak(`${landingTile.name}，售价${landingTile.price}。购买还是放弃？`, () => startFinancialListening("landing", movedSession));
+        speak(movedSession.voiceEnabled ? `${spokenCityName(landingTile)}，售价${landingTile.price}。购买还是放弃？` : `${spokenCityName(landingTile)}，售价${landingTile.price}。请在屏幕选择购买或放弃。`, () => startFinancialListening("landing", movedSession));
       } else if (ownership.playerIndex === movedSession.currentPlayerIndex) {
         decision = { kind: "upgrade", cityId: landingTile.id };
         landingDecisionRef.current = decision;
         setLandingDecision(decision);
         changeTurnPhase("deciding");
-        if (movedSession.voiceEnabled) speak(`${landingTile.name}，升级${landingTile.buildCost}。升级还是结束？`, () => startFinancialListening("landing", movedSession));
+        speak(movedSession.voiceEnabled ? `${spokenCityName(landingTile)}，升级${landingTile.buildCost}。升级还是结束？` : `${spokenCityName(landingTile)}，升级需要${landingTile.buildCost}。请在屏幕选择升级或结束。`, () => startFinancialListening("landing", movedSession));
       } else {
         const rent = calculateRent(movedSession, landingTile, ownership.property);
         if (rent === 0) {
@@ -1267,13 +1336,13 @@ export function GameSessionScreen({
           landingDecisionRef.current = decision;
           setLandingDecision(decision);
           changeTurnPhase("deciding");
-          if (movedSession.voiceEnabled) speak(`${landingTile.name}已抵押，本次免租。说继续。`, () => startFinancialListening("landing", movedSession));
+          speak(movedSession.voiceEnabled ? `${spokenCityName(landingTile)}已抵押，本次免租。说继续。` : `${spokenCityName(landingTile)}已抵押，本次免租。请点击继续。`, () => startFinancialListening("landing", movedSession));
         } else if (activePlayer.cash >= rent) {
           const transfer = transferRent(movedSession, landingTile);
           const paidSession = transfer?.session ?? movedSession;
           movedSessionRef.current = paidSession;
           if (transfer) {
-            commitTransaction(movedSession, paidSession, `支付${landingTile.name}租金`);
+            commitTransaction(movedSession, paidSession, `向${ownership.player.name}支付${landingTile.name}租金`);
             showRentFlight(movedSession, ownership.playerIndex, rent);
             playUiSound("rent");
           }
@@ -1281,14 +1350,14 @@ export function GameSessionScreen({
           landingDecisionRef.current = decision;
           setLandingDecision(decision);
           changeTurnPhase("deciding");
-          if (paidSession.voiceEnabled) speak(`${landingTile.name}，已付${rent}租金。说继续。`, () => startFinancialListening("landing", paidSession));
+          speak(paidSession.voiceEnabled ? `${spokenCityName(landingTile)}，已向${ownership.player.name}缴纳${rent}租金。说继续。` : `${spokenCityName(landingTile)}，已向${ownership.player.name}缴纳${rent}租金。请点击继续。`, () => startFinancialListening("landing", paidSession));
         } else {
           decision = { kind: "rent-due", cityId: landingTile.id, rent, ownerName: ownership.player.name, shortage: rent - activePlayer.cash };
           landingDecisionRef.current = decision;
           setLandingDecision(decision);
           changeTurnPhase("rescue");
           setAssetManagerOpen(true);
-          if (movedSession.voiceEnabled) speak(`${landingTile.name}租金${rent}，还差${rent - activePlayer.cash}。请处理资产。`, () => startFinancialListening("assets", movedSession));
+          speak(`${spokenCityName(landingTile)}需要向${ownership.player.name}缴纳${rent}租金，目前还差${rent - activePlayer.cash}。请处理资产。`, () => startFinancialListening("assets", movedSession));
         }
       }
     }, quickly || reducedMotion ? 260 : 850);
@@ -1341,18 +1410,21 @@ export function GameSessionScreen({
     if (turnPhaseRef.current !== "answering" || !roll || !originSession || answerLockedRef.current) return;
     stopVoiceListening();
     if (answer !== roll.total) {
-      setMathFeedback(`${answer} 还不对，再看看两个小球吧`);
-      setVoiceStatus(`回答 ${answer}，再想一想`);
+      let encouragementIndex = Math.floor(Math.random() * MATH_ENCOURAGEMENTS.length);
+      if (encouragementIndex === lastEncouragementRef.current) encouragementIndex = (encouragementIndex + 1) % MATH_ENCOURAGEMENTS.length;
+      lastEncouragementRef.current = encouragementIndex;
+      const encouragement = MATH_ENCOURAGEMENTS[encouragementIndex];
+      setMathFeedback(`${answer} 还不对。${encouragement}`);
+      setVoiceStatus(`回答 ${answer}，${encouragement}`);
       playUiSound("remove");
-      if (originSession.voiceEnabled) speak(`很接近啦，再想一想。${roll.first}加${roll.second}等于多少？没反应时，可以在答案后面说完毕。`, () => startVoiceListening("answer", originSession));
+      speak(mathQuestionCopy(roll, originSession, encouragement), () => startVoiceListening("answer", originSession));
       return;
     }
     answerLockedRef.current = true;
     setMathFeedback(`答对啦！${roll.first} + ${roll.second} = ${roll.total}`);
     setVoiceStatus("回答正确，准备前进");
     playUiSound("success");
-    if (originSession.voiceEnabled) speak(`答对啦！${roll.first}加${roll.second}等于${roll.total}，出发！`, () => beginMovement(originSession, roll.total));
-    else beginMovement(originSession, roll.total);
+    speak(`答对啦！${roll.first}加${roll.second}等于${roll.total}，出发！`, () => beginMovement(originSession, roll.total));
   };
   submitMathAnswerRef.current = submitMathAnswer;
 
@@ -1376,7 +1448,7 @@ export function GameSessionScreen({
     window.speechSynthesis?.cancel();
     const microphoneReady = await prepareMicrophone();
     if (!microphoneReady) return;
-    speak(`${roll.first}加${roll.second}等于多少？请说出答案。没反应时，可以在答案后面说完毕。`, () => startVoiceListening("answer", originSession));
+    speak(mathQuestionCopy(roll, originSession), () => startVoiceListening("answer", originSession));
   };
 
   const completeRouletteSpin = (requestedSession: GameSession | null, roll: RouletteResult) => {
@@ -1398,11 +1470,7 @@ export function GameSessionScreen({
     if (rollingPlayer.isChild) {
       changeTurnPhase("answering");
       setMathFeedback(`请让 ${rollingPlayer.name} 算一算`);
-      if (originSession.voiceEnabled) speak(`${roll.first}加${roll.second}等于多少？请说出答案。没反应时，可以在答案后面说完毕。`, () => startVoiceListening("answer", originSession));
-      else {
-        setVoiceStatus("语音已关闭，请点击数字回答");
-        setVoiceVisualState("off");
-      }
+      speak(mathQuestionCopy(roll, originSession), () => startVoiceListening("answer", originSession));
       return;
     }
     beginMovement(originSession, roll.total);
@@ -1484,9 +1552,7 @@ export function GameSessionScreen({
     financialActionRef.current = action;
     setFinancialAction(action);
     stopVoiceListening();
-    if (sessionRef.current.voiceEnabled) {
-      speak(`${action.label}。确认还是取消？`, () => startFinancialListening("confirm", sessionRef.current));
-    }
+    speak(sessionRef.current.voiceEnabled ? `${action.label}。确认还是取消？` : `${action.label}。请在屏幕选择确认或取消。`, () => startFinancialListening("confirm", sessionRef.current));
   };
 
   const requestPurchase = (cityId: string) => {
@@ -1496,7 +1562,7 @@ export function GameSessionScreen({
     if (active.cash < city.price) {
       changeTurnPhase("rescue");
       setAssetManagerOpen(true);
-      if (sessionRef.current.voiceEnabled) speak(`现金还差${city.price - active.cash}金币。你可以先管理资产，或者返回放弃购买。`, () => startFinancialListening("assets", sessionRef.current));
+      speak(`现金还差${city.price - active.cash}金币。你可以先管理资产，或者返回放弃购买。`, () => startFinancialListening("assets", sessionRef.current));
       return;
     }
     requestFinancialConfirmation({ kind: "purchase", cityId, amount: city.price, label: `支付${city.price}金币购买${city.name}` });
@@ -1510,7 +1576,7 @@ export function GameSessionScreen({
     if (active.cash < city.buildCost) {
       changeTurnPhase("rescue");
       setAssetManagerOpen(true);
-      if (sessionRef.current.voiceEnabled) speak(`升级还差${city.buildCost - active.cash}金币。你可以先管理资产，或者返回结束回合。`, () => startFinancialListening("assets", sessionRef.current));
+      speak(`升级还差${city.buildCost - active.cash}金币。你可以先管理资产，或者返回结束回合。`, () => startFinancialListening("assets", sessionRef.current));
       return;
     }
     const nextLabel = property.buildingLevel === 4 ? "旅馆" : `第${property.buildingLevel + 1}座房屋`;
@@ -1529,6 +1595,9 @@ export function GameSessionScreen({
   };
 
   const finishCityDecision = (completedSession: GameSession = sessionRef.current) => {
+    if (propertyCelebrationTimerRef.current !== null) window.clearTimeout(propertyCelebrationTimerRef.current);
+    propertyCelebrationTimerRef.current = null;
+    setPropertyCelebration(null);
     stopVoiceListening();
     window.speechSynthesis?.cancel();
     landingDecisionRef.current = null;
@@ -1564,11 +1633,22 @@ export function GameSessionScreen({
     setFinancialAction(null);
     transactionGuardRef.current = false;
     if (action.kind === "asset") {
-      if (nextSession.voiceEnabled) speak("资产操作已完成。你可以继续选择，或者查看是否已经筹够。", () => startFinancialListening("assets", nextSession));
+      speak("资产操作已完成。你可以继续选择，或者查看是否已经筹够。", () => startFinancialListening("assets", nextSession));
       return;
     }
-    if (nextSession.voiceEnabled) speak("操作成功，本回合完成。", () => finishCityDecision(nextSession));
-    else finishCityDecision(nextSession);
+    const activePlayer = nextSession.players[nextSession.currentPlayerIndex];
+    const upgradedProperty = activePlayer.properties.find((property) => property.tileId === action.cityId);
+    const celebration: PropertyCelebration = action.kind === "purchase"
+      ? { kind: "purchase", icon: "🎉", title: `恭喜${activePlayer.name}拿下${city?.name ?? "新城市"}！`, detail: "新的环球地标加入你的版图，未来会带来租金收入。" }
+      : upgradedProperty?.buildingLevel === 5
+        ? { kind: "hotel", icon: "🏨", title: `${city?.name ?? "城市"}的旅馆盛大开业！`, detail: `${activePlayer.name}完成了最高等级建设，掌声和礼花都安排上！` }
+        : { kind: "upgrade", icon: "🏠", title: `${city?.name ?? "城市"}又热闹了一点！`, detail: `恭喜${activePlayer.name}建成第 ${upgradedProperty?.buildingLevel ?? 1} 座房屋，租金也提升啦。` };
+    landingDecisionRef.current = null;
+    setLandingDecision(null);
+    setPropertyCelebration(celebration);
+    setVoiceStatus(celebration.title);
+    speak(`${celebration.title}${celebration.detail}`);
+    propertyCelebrationTimerRef.current = window.setTimeout(() => finishCityDecision(nextSession), reducedMotion ? 950 : 2400);
   };
 
   const cancelFinancialAction = () => {
@@ -1576,7 +1656,7 @@ export function GameSessionScreen({
     financialActionRef.current = null;
     setFinancialAction(null);
     playUiSound("tap");
-    if (assetManagerOpen && sessionRef.current.voiceEnabled) speak("已取消。你可以重新选择资产。", () => startFinancialListening("assets", sessionRef.current));
+    if (assetManagerOpen) speak("已取消。你可以重新选择资产。", () => startFinancialListening("assets", sessionRef.current));
   };
 
   const payPendingRent = () => {
@@ -1590,7 +1670,7 @@ export function GameSessionScreen({
     transactionGuardRef.current = true;
     const beforePayment = sessionRef.current;
     const owner = getPropertyOwner(beforePayment, city.id);
-    commitTransaction(beforePayment, transfer.session, `支付${city.name}租金`);
+    commitTransaction(beforePayment, transfer.session, `向${decision.ownerName}支付${city.name}租金`);
     movedSessionRef.current = transfer.session;
     if (owner) showRentFlight(beforePayment, owner.playerIndex, decision.rent);
     playUiSound("rent");
@@ -1600,8 +1680,7 @@ export function GameSessionScreen({
     setLandingDecision(paidDecision);
     changeTurnPhase("deciding");
     transactionGuardRef.current = false;
-    if (transfer.session.voiceEnabled) speak(`已支付${decision.rent}金币租金，资产自救成功。`, () => finishCityDecision(transfer.session));
-    else finishCityDecision(transfer.session);
+    speak(`已向${decision.ownerName}缴纳${decision.rent}金币租金，资产自救成功。`, () => finishCityDecision(transfer.session));
   };
 
   const requestFamilyRelief = () => {
@@ -1616,7 +1695,7 @@ export function GameSessionScreen({
     movedSessionRef.current = aid.session;
     playUiSound("reward");
     transactionGuardRef.current = false;
-    if (aid.session.voiceEnabled) speak(`家庭银行送来${aid.amount}金币援助金。现在可以安心支付租金，支付后还会保留基本旅行金。`, () => startFinancialListening("assets", aid.session));
+    speak(`家庭银行送来${aid.amount}金币援助金。现在可以安心支付租金，支付后还会保留基本旅行金。`, () => startFinancialListening("assets", aid.session));
   };
 
   const undoLastTransaction = () => {
@@ -1650,14 +1729,14 @@ export function GameSessionScreen({
     playUiSound("remove");
     transactionGuardRef.current = false;
     setVoiceStatus(`已撤销：${snapshot.label}`);
-    if (restored.voiceEnabled) speak(`已经撤销${snapshot.label}。`);
+    speak(`已经撤销${snapshot.label}。`);
   };
 
   const openAssetManager = () => {
     stopVoiceListening();
     window.speechSynthesis?.cancel();
     setAssetManagerOpen(true);
-    if (sessionRef.current.voiceEnabled) speak("这里是你的资产中心。可以说卖房、卖地、抵押或赎回，再加上城市名称。租金实在不够时，也可以说申请家庭援助。", () => startFinancialListening("assets", sessionRef.current));
+    speak(sessionRef.current.voiceEnabled ? "这里是你的资产中心。可以说卖房、卖地、抵押或赎回，再加上城市名称。租金实在不够时，也可以说申请家庭援助。" : "这里是你的资产中心。请选择城市，再点击卖房、卖地、抵押或赎回。租金实在不够时，也可以点击申请家庭援助。", () => startFinancialListening("assets", sessionRef.current));
   };
 
   const closeAssetManager = () => {
@@ -1684,7 +1763,7 @@ export function GameSessionScreen({
         const voiceSession = { ...sessionRef.current, voiceEnabled: true, updatedAt: Date.now() };
         sessionRef.current = voiceSession;
         onSessionChange(voiceSession);
-        setVoiceStatus("语音主持已开启，操作由 iPhone 遥控器接收");
+        setVoiceStatus("语音回复已开启，操作由 iPhone 遥控器接收");
         setVoiceVisualState("idle");
         return;
       }
@@ -1694,13 +1773,21 @@ export function GameSessionScreen({
       return;
     }
     stopVoiceListening();
-    window.speechSynthesis?.cancel();
     const silentSession = { ...sessionRef.current, voiceEnabled: false, updatedAt: Date.now() };
     sessionRef.current = silentSession;
     onSessionChange(silentSession);
     setRecognizedTranscript("");
-    setVoiceStatus("语音主持已关闭，所有操作仍可点击");
+    setVoiceStatus("语音回复已关闭，主持播报保持开启");
     setVoiceVisualState("off");
+  };
+
+  const updateVoiceNarrationEnabled = (enabled: boolean) => {
+    if (!enabled) window.speechSynthesis?.cancel();
+    const nextSession = { ...sessionRef.current, voiceNarrationEnabled: enabled, updatedAt: Date.now() };
+    sessionRef.current = nextSession;
+    onSessionChange(nextSession);
+    setVoiceStatus(enabled ? (nextSession.voiceEnabled ? "语音播报已开启" : "语音播报已开启，回复仍关闭") : "语音播报已关闭");
+    setVoiceVisualState(nextSession.voiceEnabled ? "idle" : "off");
   };
 
   const toggleFullscreen = async () => {
@@ -1720,7 +1807,7 @@ export function GameSessionScreen({
   const resumeGameInteraction = () => {
     if (!sessionRef.current.voiceEnabled) return;
     if (turnPhaseRef.current === "answering" && pendingRollRef.current) {
-      speak(`${pendingRollRef.current.first}加${pendingRollRef.current.second}等于多少？请说出答案。没反应时，可以在答案后面说完毕。`, () => startVoiceListening("answer", sessionRef.current));
+      speak(mathQuestionCopy(pendingRollRef.current, sessionRef.current), () => startVoiceListening("answer", sessionRef.current));
     } else if (assetManagerOpenRef.current) {
       startFinancialListening("assets", sessionRef.current);
     } else if (landingDecisionRef.current) {
@@ -1760,6 +1847,10 @@ export function GameSessionScreen({
   useEffect(() => {
     const handleKeyboard = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (inspectedPlayerId) {
+          setInspectedPlayerId(null);
+          return;
+        }
         if (rulesOpen) closeRules();
         return;
       }
@@ -1772,7 +1863,13 @@ export function GameSessionScreen({
     return () => window.removeEventListener("keydown", handleKeyboard);
     // Handlers intentionally track the currently open help overlay.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rulesOpen, voiceGuideOpen, onboardingOpen]);
+  }, [rulesOpen, voiceGuideOpen, onboardingOpen, inspectedPlayerId]);
+
+  useEffect(() => {
+    const closeRemoteOverlay = () => setInspectedPlayerId(null);
+    window.addEventListener(REMOTE_CLOSE_OVERLAY_EVENT, closeRemoteOverlay);
+    return () => window.removeEventListener(REMOTE_CLOSE_OVERLAY_EVENT, closeRemoteOverlay);
+  }, []);
 
   const openSettlement = () => {
     if (turnPhaseRef.current !== "ready") skipTurnAnimation();
@@ -1792,7 +1889,7 @@ export function GameSessionScreen({
   const closeDialogAndResume = () => {
     setDialog(null);
     if (turnPhaseRef.current === "answering" && pendingRollRef.current) {
-      if (session.voiceEnabled) speak("我们继续。两个小球加起来，一共是多少点？没反应时，可以在答案后说完毕。", () => startVoiceListening("answer", session));
+      speak(session.voiceEnabled ? "我们继续。两个小球加起来，一共是多少点？没反应时，可以在答案后说完毕。" : "我们继续。两个小球加起来，一共是多少点？请选择你计算出的数字。", () => startVoiceListening("answer", session));
     } else if (turnPhaseRef.current === "ready") {
       window.setTimeout(() => announceTurn(session), 180);
     }
@@ -1847,11 +1944,40 @@ export function GameSessionScreen({
   const regionLabels = { asia: "亚洲", oceania: "大洋洲", africa: "非洲", europe: "欧洲", america: "美洲" } as const;
   const rulesCities = BOARD_TILES.filter((tile): tile is CityTile => tile.type === "city" && (rulesRegion === "all" || tile.region === rulesRegion));
   const handbookRent = (city: CityTile, level: number) => Math.round(city.baseRent * [1, 2, 3.25, 5, 7.5, 10][level] * economy.rentMultiplier / 10) * 10;
+  const remoteGameState = JSON.stringify({
+    players: session.players.map((player) => ({
+      id: player.id,
+      name: player.name,
+      avatar: player.avatar,
+      cash: player.cash,
+      total: calculateAssetBreakdown(player).total,
+      cities: player.properties.flatMap((property) => {
+        const city = getCity(property.tileId);
+        return city ? [{
+          name: city.name,
+          icon: city.icon,
+          building: property.buildingLevel === 5 ? "旅馆" : property.buildingLevel > 0 ? `${property.buildingLevel} 房` : "空地",
+          rent: calculateRent(session, city, property),
+          mortgaged: property.mortgaged,
+        }] : [];
+      }),
+    })),
+    cityOffer: decisionCity ? {
+      name: decisionCity.name,
+      icon: decisionCity.icon,
+      price: decisionCity.price,
+      baseRent: decisionCity.baseRent,
+      buildCost: decisionCity.buildCost,
+      cashAfter: currentPlayer.cash - decisionCity.price,
+      kind: landingDecision?.kind ?? "city",
+    } : null,
+  });
 
   return (
     <div
       className={largeScreenScale > 1 ? "live-game-stage proportional-large-stage" : "live-game-stage"}
       style={{ "--large-screen-scale": largeScreenScale } as React.CSSProperties}
+      data-remote-game-state={remoteGameState}
     >
     {nativeTouchLayout && (
       <div className="tv-rotate-prompt" role="status">
@@ -1859,6 +1985,29 @@ export function GameSessionScreen({
         <b>请横屏继续游戏</b>
         <small>棋盘会在横屏后自动铺满，64 格和当前进度都会完整保留。</small>
       </div>
+    )}
+    {nativeTouchLayout && (
+      <>
+        <button
+          className={mobileToolsOpen ? "mobile-tools-toggle active" : "mobile-tools-toggle"}
+          type="button"
+          onClick={() => setMobileToolsOpen((open) => !open)}
+          aria-expanded={mobileToolsOpen}
+          aria-controls="mobile-game-tools"
+        >{mobileToolsOpen ? "收起" : "功能"}</button>
+        <section className={mobileToolsOpen ? "mobile-game-tools open" : "mobile-game-tools"} id="mobile-game-tools" aria-label="游戏功能区">
+          <header><b>游戏功能</b><button type="button" onClick={() => setMobileToolsOpen(false)} aria-label="收起功能区">×</button></header>
+          <div>
+            <button type="button" className={session.voiceEnabled ? "active" : ""} onClick={() => updateVoiceEnabled(!session.voiceEnabled)}><span>{session.voiceEnabled ? "🎙️" : "🚫"}</span><b>{session.voiceEnabled ? "回复开" : "回复关"}</b></button>
+            <button type="button" className={narrationEnabled ? "active" : ""} onClick={() => updateVoiceNarrationEnabled(!narrationEnabled)}><span>{narrationEnabled ? "📣" : "🔇"}</span><b>{narrationEnabled ? "播报开" : "播报关"}</b></button>
+            <button type="button" className={musicEnabled ? "active" : ""} onClick={() => onMusicChange(!musicEnabled)}><span>{musicEnabled ? "♫" : "♪"}</span><b>{musicEnabled ? "音乐开" : "音乐关"}</b></button>
+            <button type="button" className={effectsEnabled ? "active" : ""} onClick={() => onEffectsChange(!effectsEnabled)}><span>{effectsEnabled ? "🔔" : "🔕"}</span><b>{effectsEnabled ? "音效开" : "音效关"}</b></button>
+            <button type="button" onClick={() => { setMobileToolsOpen(false); openAssetManager(); }}><span>🏦</span><b>查看资产</b></button>
+            <button type="button" onClick={() => { setMobileToolsOpen(false); openRules("quick"); }}><span>📖</span><b>玩法规则</b></button>
+            <button type="button" className="settlement" onClick={() => { setMobileToolsOpen(false); openSettlement(); }}><span>🏆</span><b>结算排行</b></button>
+          </div>
+        </section>
+      </>
     )}
     <main className={`game-shell${effectiveTvMode || nativeTouchLayout ? " tv-mode" : ""} phase-${turnPhase}`} style={{ "--active-color": currentColor } as React.CSSProperties}>
       <header className="game-topbar">
@@ -1882,7 +2031,8 @@ export function GameSessionScreen({
             aria-pressed={musicEnabled}
           >{musicEnabled ? "♫" : "♪"}</button>
           <button className={effectsEnabled ? "game-icon-action active" : "game-icon-action"} type="button" onClick={() => onEffectsChange(!effectsEnabled)} aria-label={effectsEnabled ? "关闭游戏音效" : "打开游戏音效"} aria-pressed={effectsEnabled} title={effectsEnabled ? "关闭游戏音效" : "打开游戏音效"}>{effectsEnabled ? "🔔" : "🔕"}</button>
-          <button className={session.voiceEnabled ? "game-icon-action active" : "game-icon-action"} type="button" onClick={() => updateVoiceEnabled(!session.voiceEnabled)} aria-label={session.voiceEnabled ? "关闭语音主持" : "打开语音主持"} aria-pressed={session.voiceEnabled} title={session.voiceEnabled ? "关闭语音主持" : "打开语音主持"}>{session.voiceEnabled ? "🎙️" : "🚫"}</button>
+          <button className={session.voiceEnabled ? "game-icon-action active" : "game-icon-action"} type="button" onClick={() => updateVoiceEnabled(!session.voiceEnabled)} aria-label={session.voiceEnabled ? "关闭语音回复" : "打开语音回复"} aria-pressed={session.voiceEnabled} title={session.voiceEnabled ? "关闭麦克风和语音回复，主持仍会播报" : "打开麦克风和语音回复"}>{session.voiceEnabled ? "🎙️" : "🚫"}</button>
+          <button className={narrationEnabled ? "game-icon-action active" : "game-icon-action"} type="button" onClick={() => updateVoiceNarrationEnabled(!narrationEnabled)} aria-label={narrationEnabled ? "关闭主持播报" : "打开主持播报"} aria-pressed={narrationEnabled} title={narrationEnabled ? "关闭主持播报" : "打开主持播报"}>{narrationEnabled ? "📣" : "🔇"}</button>
           <button className={isFullscreen ? "game-icon-action active" : "game-icon-action"} type="button" onClick={toggleFullscreen} aria-label={isFullscreen ? "退出全屏" : "进入全屏"} aria-pressed={isFullscreen} title={isFullscreen ? "退出全屏" : "进入电视全屏"}>{isFullscreen ? "↙" : "⛶"}</button>
           <button className="cast-button" type="button" onClick={onOpenRemoteController}>📱 iPhone 遥控</button>
           <button className="rules-button" type="button" onClick={() => openRules("quick")} aria-label="打开玩法规则手册" title="玩法规则手册，快捷键问号">📖 规则</button>
@@ -1907,6 +2057,16 @@ export function GameSessionScreen({
               key={player.id}
               style={{ "--rail-color": color } as React.CSSProperties}
               aria-current={isActive ? "true" : undefined}
+              role="button"
+              tabIndex={0}
+              aria-label={`查看${player.name}的资产`}
+              onClick={() => { stopVoiceListening(); setMobileToolsOpen(false); setInspectedPlayerId(player.id); }}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                stopVoiceListening();
+                setInspectedPlayerId(player.id);
+              }}
             >
               <span className="rail-avatar">{player.avatar}</span>
               <span className="rail-name"><b>{player.name} {player.isChild ? <i className="child-badge">小朋友</i> : null}</b><small>{isActive ? "正在行动" : `资产第 ${liveRank.get(player.id)} 名`}</small>{(player.cardStatus?.shieldTurns > 0 || player.cardStatus?.rentBoostTurns > 0) && <em className="card-status-badges">{player.cardStatus.shieldTurns > 0 && player.cardStatus.shieldUses > 0 ? `🛡️ 护盾 ${player.cardStatus.shieldTurns}` : ""}{player.cardStatus.rentBoostTurns > 0 ? ` 📈 租金 ${player.cardStatus.rentBoostTurns}` : ""}</em>}</span>
@@ -1917,16 +2077,57 @@ export function GameSessionScreen({
         })}
       </section>
 
+      {inspectedPlayer && inspectedAssets && (
+        <div className="player-assets-backdrop" role="presentation" onClick={() => setInspectedPlayerId(null)}>
+          <section className="player-assets-dialog" role="dialog" aria-modal="true" aria-labelledby="player-assets-title" onClick={(event) => event.stopPropagation()}>
+            <header>
+              <span>{inspectedPlayer.avatar}</span>
+              <div><small>PLAYER ASSETS</small><h2 id="player-assets-title">{inspectedPlayer.name}的资产</h2></div>
+              <button type="button" data-remote-close-player-assets aria-label="关闭资产详情" onClick={() => setInspectedPlayerId(null)}>×</button>
+            </header>
+            <div className="player-assets-summary">
+              <article><small>总资产</small><b>¥{numberFormatter.format(inspectedAssets.total)}</b></article>
+              <article><small>现金</small><b>¥{numberFormatter.format(inspectedAssets.cash)}</b></article>
+              <article><small>城市原价</small><b>¥{numberFormatter.format(inspectedAssets.cityOriginalValue)}</b></article>
+              <article><small>建筑投入</small><b>¥{numberFormatter.format(inspectedAssets.buildingOriginalValue)}</b></article>
+            </div>
+            <div className="player-assets-city-list">
+              <h3>名下城市 <span>{inspectedPlayer.properties.length} 座</span></h3>
+              {inspectedPlayer.properties.length === 0 ? <p className="player-assets-empty">还没有购买城市</p> : inspectedPlayer.properties.map((property) => {
+                const city = getCity(property.tileId);
+                if (!city) return null;
+                const building = property.mortgaged ? "已抵押" : property.buildingLevel === 5 ? "旅馆" : property.buildingLevel > 0 ? `${property.buildingLevel} 座房屋` : "空地";
+                return <article key={property.tileId}><span>{city.icon}</span><div><b>{city.name}</b><small>{building} · 当前租金 ¥{numberFormatter.format(calculateRent(session, city, property))}</small></div><strong>¥{numberFormatter.format(property.purchasePrice + property.buildingInvestment)}</strong></article>;
+              })}
+            </div>
+            <footer><button type="button" data-remote-close-player-assets onClick={() => setInspectedPlayerId(null)}>看完了</button></footer>
+          </section>
+        </div>
+      )}
+
       {rentFlight && (
         <div className={`rent-flight-layer${reducedMotion ? " reduced" : ""}`} role="status" aria-live="assertive" key={rentFlight.id}>
           <div className="rent-flight-card">
             <span className="rent-flight-person"><i>{rentFlight.payerAvatar}</i><b>{rentFlight.payerName}</b><small>付款方</small></span>
             <div className="rent-flight-route">
-              <b>支付租金 ¥{numberFormatter.format(rentFlight.amount)}</b>
+              <b>向 {rentFlight.ownerName} 缴纳租金 ¥{numberFormatter.format(rentFlight.amount)}</b>
               <div aria-hidden="true">{Array.from({ length: 9 }, (_, index) => <i key={index} style={{ "--coin-index": index } as React.CSSProperties}>🪙</i>)}</div>
             </div>
             <span className="rent-flight-person owner"><i>{rentFlight.ownerAvatar}</i><b>{rentFlight.ownerName}</b><small>收款方</small></span>
           </div>
+        </div>
+      )}
+
+      {propertyCelebration && (
+        <div className={`property-celebration-backdrop kind-${propertyCelebration.kind}`} role="status" aria-live="assertive">
+          <section className="property-celebration-card">
+            <div className="property-confetti" aria-hidden="true">{Array.from({ length: 18 }, (_, index) => <i key={index} style={{ "--confetti-index": index } as React.CSSProperties} />)}</div>
+            <span>{propertyCelebration.icon}</span>
+            <small>{propertyCelebration.kind === "purchase" ? "NEW CITY UNLOCKED" : propertyCelebration.kind === "hotel" ? "GRAND OPENING" : "CITY LEVEL UP"}</small>
+            <h2>{propertyCelebration.title}</h2>
+            <p>{propertyCelebration.detail}</p>
+            <div><i>✦</i><b>{propertyCelebration.kind === "purchase" ? "城市已加入名下资产" : propertyCelebration.kind === "hotel" ? "最高等级建设达成" : "城市租金同步提升"}</b><i>✦</i></div>
+          </section>
         </div>
       )}
 
@@ -1943,7 +2144,7 @@ export function GameSessionScreen({
             <span><small>建筑投入</small><b>¥{numberFormatter.format(currentAssets.buildingOriginalValue)}</b></span>
           </div>
           <button className="manage-assets-button" type="button" onClick={openAssetManager}>🏦 查看 / 管理我的资产</button>
-          <div className={`voice-ready state-${voiceVisualState}`}><i>{voiceVisualState === "speaking" ? "📣" : session.voiceEnabled ? "🎙️" : "🔕"}</i><span><b>{voiceVisualState === "speaking" ? "主持人正在播报" : voiceVisualState === "listening" ? "麦克风正在倾听" : voiceVisualState === "heard" ? "已经收到你的回答" : currentPlayer.isChild ? "小小数学家模式" : session.voiceEnabled ? "语音主持已准备" : "语音主持已关闭"}</b><small>{recognizedTranscript ? `最近听到：“${recognizedTranscript}”` : session.voiceEnabled ? voiceStatus : "仍可使用大按钮操作"}</small></span><div className="voice-wave" aria-hidden="true"><em /><em /><em /><em /><em /></div><button className={session.voiceEnabled ? "microphone-on" : ""} type="button" aria-pressed={session.voiceEnabled} onClick={() => updateVoiceEnabled(!session.voiceEnabled)}>{session.voiceEnabled ? "关闭麦克风" : "打开麦克风"}</button></div>
+          <div className={`voice-ready state-${voiceVisualState}`}><i>{voiceVisualState === "speaking" ? "📣" : session.voiceEnabled ? "🎙️" : "🔕"}</i><span><b>{voiceVisualState === "speaking" ? "主持人正在播报" : voiceVisualState === "listening" ? "麦克风正在倾听" : voiceVisualState === "heard" ? "已经收到你的回答" : currentPlayer.isChild ? "小小数学家模式" : session.voiceEnabled ? "语音回复已准备" : narrationEnabled ? "仅语音回复已关闭" : "全部语音已关闭"}</b><small>{recognizedTranscript ? `最近听到：“${recognizedTranscript}”` : session.voiceEnabled ? voiceStatus : narrationEnabled ? "主持人仍会播报，请用按钮操作" : "所有流程仍可使用按钮操作"}</small></span><div className="voice-wave" aria-hidden="true"><em /><em /><em /><em /><em /></div><button className={session.voiceEnabled ? "microphone-on" : ""} type="button" aria-pressed={session.voiceEnabled} onClick={() => updateVoiceEnabled(!session.voiceEnabled)}>{session.voiceEnabled ? "关闭语音回复" : "打开语音回复"}</button></div>
           {effectiveTvMode && !televisionMode && <button className="tv-exit-button" type="button" onClick={() => setTvMode(false)}>退出电视布局</button>}
         </aside>
 
@@ -2030,7 +2231,7 @@ export function GameSessionScreen({
 
             {rulesTab === "accessibility" && (
               <div className="rules-accessibility-content">
-                <div className="accessibility-setting-list"><button type="button" aria-pressed={musicEnabled} onClick={() => onMusicChange(!musicEnabled)}><span>{musicEnabled ? "♫" : "♪"}</span><p><b>背景音乐</b><small>{musicEnabled ? "已开启 · 欢乐旅行曲" : "已关闭 · 不影响事件提示"}</small></p><em>{musicEnabled ? "开启" : "关闭"}</em></button><button type="button" aria-pressed={effectsEnabled} onClick={() => onEffectsChange(!effectsEnabled)}><span>{effectsEnabled ? "🔔" : "🔕"}</span><p><b>游戏音效</b><small>{effectsEnabled ? "已开启 · 按钮和事件有反馈" : "已关闭 · 画面会完整显示结果"}</small></p><em>{effectsEnabled ? "开启" : "关闭"}</em></button><button type="button" aria-pressed={session.voiceEnabled} onClick={() => { if (!session.voiceEnabled) setRulesOpen(false); updateVoiceEnabled(!session.voiceEnabled); }}><span>{session.voiceEnabled ? "🎙️" : "🚫"}</span><p><b>语音主持</b><small>{session.voiceEnabled ? "已开启 · 点名、答题与城市选择" : "已关闭 · 所有流程均保留大按钮"}</small></p><em>{session.voiceEnabled ? "开启" : "关闭"}</em></button><button type="button" aria-pressed={reducedMotion} onClick={() => changeReducedMotion(!reducedMotion)}><span>{reducedMotion ? "✓" : "✨"}</span><p><b>简化动态效果</b><small>{reducedMotion ? "已简化 · 轮盘与移动会更快" : "标准动画 · 仍可随时跳过"}</small></p><em>{reducedMotion ? "简化" : "标准"}</em></button></div>
+                <div className="accessibility-setting-list"><button type="button" aria-pressed={musicEnabled} onClick={() => onMusicChange(!musicEnabled)}><span>{musicEnabled ? "♫" : "♪"}</span><p><b>背景音乐</b><small>{musicEnabled ? "已开启 · 欢乐旅行曲" : "已关闭 · 不影响事件提示"}</small></p><em>{musicEnabled ? "开启" : "关闭"}</em></button><button type="button" aria-pressed={effectsEnabled} onClick={() => onEffectsChange(!effectsEnabled)}><span>{effectsEnabled ? "🔔" : "🔕"}</span><p><b>游戏音效</b><small>{effectsEnabled ? "已开启 · 按钮和事件有反馈" : "已关闭 · 画面会完整显示结果"}</small></p><em>{effectsEnabled ? "开启" : "关闭"}</em></button><button type="button" aria-pressed={session.voiceEnabled} onClick={() => { if (!session.voiceEnabled) setRulesOpen(false); updateVoiceEnabled(!session.voiceEnabled); }}><span>{session.voiceEnabled ? "🎙️" : "🚫"}</span><p><b>语音回复</b><small>{session.voiceEnabled ? "已开启 · 可直接回答和选择" : "已关闭 · 主持仍会播报，请用按钮操作"}</small></p><em>{session.voiceEnabled ? "开启" : "关闭"}</em></button><button type="button" aria-pressed={narrationEnabled} onClick={() => updateVoiceNarrationEnabled(!narrationEnabled)}><span>{narrationEnabled ? "📣" : "🔇"}</span><p><b>语音播报</b><small>{narrationEnabled ? "已开启 · 主持人会点名和说明结果" : "已关闭 · 不影响麦克风回复设置"}</small></p><em>{narrationEnabled ? "开启" : "关闭"}</em></button><button type="button" aria-pressed={reducedMotion} onClick={() => changeReducedMotion(!reducedMotion)}><span>{reducedMotion ? "✓" : "✨"}</span><p><b>简化动态效果</b><small>{reducedMotion ? "已简化 · 轮盘与移动会更快" : "标准动画 · 仍可随时跳过"}</small></p><em>{reducedMotion ? "简化" : "标准"}</em></button></div>
                 <section className="accessibility-promises"><h3>全家都能看懂和操作</h3><div><article><span>◆</span><b>不只靠颜色</b><small>玩家归属同时显示头像、姓名、排名和文字标签。</small></article><article><span>⌨️</span><b>键盘可操作</b><small>Tab 切换按钮，Enter 或空格确认，Esc 关闭说明，? 打开规则。</small></article><article><span>👆</span><b>大触控热区</b><small>手机和平板上的关键按钮至少 48 像素，适合小朋友点击。</small></article><article><span>👁️</span><b>结果不只靠声音</b><small>语音、音乐或音效关闭时，点数、地点、金额与结果仍会显示。</small></article></div></section>
               </div>
             )}
@@ -2118,7 +2319,7 @@ export function GameSessionScreen({
 
               {landingDecision.kind === "rent-paid" && <><div className="rent-result"><span>🪙</span><b>{landingDecision.rent > 0 ? `已向 ${landingDecision.ownerName} 支付 ¥${numberFormatter.format(landingDecision.rent)}` : "城市抵押中，本次免租"}</b><small>双方现金已经更新，并写入旅行动态。</small></div><div className="economy-voice-hint"><i className="voice-pulse" /><span><b>说“继续”进入下一位</b><small>主持人正在等待你的回答</small></span></div><div className="economy-actions single"><button className="economy-primary" type="button" onClick={() => finishCityDecision()}><b>完成本回合 →</b></button></div></>}
 
-              {landingDecision.kind === "rent-due" && <><div className="rent-result danger"><span>🛟</span><b>需要支付 ¥{numberFormatter.format(landingDecision.rent)}</b><small>当前现金 ¥{numberFormatter.format(currentPlayer.cash)}，还差 ¥{numberFormatter.format(Math.max(0, landingDecision.rent - currentPlayer.cash))}</small></div><div className="economy-actions single"><button className="economy-primary" type="button" onClick={openAssetManager}><b>打开资产自救中心 →</b></button></div></>}
+              {landingDecision.kind === "rent-due" && <><div className="rent-result danger"><span>🛟</span><b>需向 {landingDecision.ownerName} 缴纳 ¥{numberFormatter.format(landingDecision.rent)}</b><small>当前现金 ¥{numberFormatter.format(currentPlayer.cash)}，还差 ¥{numberFormatter.format(Math.max(0, landingDecision.rent - currentPlayer.cash))}</small></div><div className="economy-actions single"><button className="economy-primary" type="button" onClick={openAssetManager}><b>打开资产自救中心 →</b></button></div></>}
               <footer>🎙️ {voiceStatus}</footer>
             </div>
           </section>
@@ -2150,7 +2351,7 @@ export function GameSessionScreen({
                 );
               })}
             </div>
-            <footer><span>🎙️ {voiceStatus}</span><div>{undoSnapshot && <button type="button" onClick={undoLastTransaction}>↶ 撤销上一笔</button>}<button type="button" onClick={closeAssetManager}>返回</button>{landingDecision?.kind === "rent-due" && currentPlayer.cash < landingDecision.rent && <button className="family-aid-button" type="button" onClick={requestFamilyRelief}>🎁 申请家庭援助</button>}{landingDecision?.kind === "rent-due" && <button className="pay-debt-button" type="button" disabled={currentPlayer.cash < landingDecision.rent} onClick={payPendingRent}>{currentPlayer.cash >= landingDecision.rent ? `支付租金 ¥${numberFormatter.format(landingDecision.rent)}` : `仍差 ¥${numberFormatter.format(landingDecision.rent - currentPlayer.cash)}`}</button>}</div></footer>
+            <footer><span>🎙️ {voiceStatus}</span><div>{undoSnapshot && <button type="button" onClick={undoLastTransaction}>↶ 撤销上一笔</button>}<button type="button" onClick={closeAssetManager}>返回</button>{landingDecision?.kind === "rent-due" && currentPlayer.cash < landingDecision.rent && <button className="family-aid-button" type="button" onClick={requestFamilyRelief}>🎁 申请家庭援助</button>}{landingDecision?.kind === "rent-due" && <button className="pay-debt-button" type="button" disabled={currentPlayer.cash < landingDecision.rent} onClick={payPendingRent}>{currentPlayer.cash >= landingDecision.rent ? `向${landingDecision.ownerName}付 ¥${numberFormatter.format(landingDecision.rent)}` : `仍差 ¥${numberFormatter.format(landingDecision.rent - currentPlayer.cash)}`}</button>}</div></footer>
           </section>
         </div>
       )}
