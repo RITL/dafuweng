@@ -966,17 +966,17 @@ export function GameSessionScreen({
           const heardBuy = alternatives.some((item) => /购买|买下|买吧|要买|我要|要这个|拿下|买一个|买了|^[买卖麦迈白百摆唛]$/.test(item.replace(/[，。！？!\s]/g, "")));
           if (heard(/放弃|不要|跳过|不买|算了/)) acceptCommand(() => finishCityDecision());
           else if (heardBuy) acceptCommand(() => requestPurchase(decision.cityId));
-          else retryAfterUnclear("我会继续听。想买可以说我要购买，或者说放弃。", "landing");
+          else retryAfterUnclear("请说购买，或者放弃。", "landing");
         } else if (decision.kind === "upgrade") {
           if (heard(/放弃|不要|结束|跳过|不升级|算了/)) acceptCommand(() => finishCityDecision());
           else if (heard(/升级|建房|盖房|旅馆|升吧|生机|升级吧/)) acceptCommand(() => requestUpgrade(decision.cityId));
-          else retryAfterUnclear("我会继续听。想升级可以说升级，或者说结束。", "landing");
+          else retryAfterUnclear("请说升级，或者结束。", "landing");
         } else if (decision.kind === "rent-paid") {
           if (heard(/继续|结束|好的|下一位|可以/)) acceptCommand(() => finishCityDecision());
-          else retryAfterUnclear("我会继续听，请说继续。", "landing");
+          else retryAfterUnclear("请说继续。", "landing");
         } else if (decision.kind === "rent-due") {
           if (heard(/资产|筹钱|卖|抵押|打开/)) acceptCommand(openAssetManager);
-          else retryAfterUnclear("我会继续听，请说打开资产中心。", "landing");
+          else retryAfterUnclear("请说打开资产。", "landing");
         }
         return;
       }
@@ -1253,13 +1253,13 @@ export function GameSessionScreen({
         landingDecisionRef.current = decision;
         setLandingDecision(decision);
         changeTurnPhase("deciding");
-        if (movedSession.voiceEnabled) speak(`${arrivalSentence}。这里是一座无主城市，价格${landingTile.price}金币，基础租金${landingTile.baseRent}金币。听到提示后，请说我要购买，或者放弃。`, () => startFinancialListening("landing", movedSession));
+        if (movedSession.voiceEnabled) speak(`${landingTile.name}，售价${landingTile.price}。购买还是放弃？`, () => startFinancialListening("landing", movedSession));
       } else if (ownership.playerIndex === movedSession.currentPlayerIndex) {
         decision = { kind: "upgrade", cityId: landingTile.id };
         landingDecisionRef.current = decision;
         setLandingDecision(decision);
         changeTurnPhase("deciding");
-        if (movedSession.voiceEnabled) speak(`${arrivalSentence}。这是你的城市，升级需要${landingTile.buildCost}金币，要升级还是结束回合？`, () => startFinancialListening("landing", movedSession));
+        if (movedSession.voiceEnabled) speak(`${landingTile.name}，升级${landingTile.buildCost}。升级还是结束？`, () => startFinancialListening("landing", movedSession));
       } else {
         const rent = calculateRent(movedSession, landingTile, ownership.property);
         if (rent === 0) {
@@ -1267,7 +1267,7 @@ export function GameSessionScreen({
           landingDecisionRef.current = decision;
           setLandingDecision(decision);
           changeTurnPhase("deciding");
-          if (movedSession.voiceEnabled) speak(`${arrivalSentence}。这座城市目前处于抵押状态，这次不用支付租金。说继续即可结束回合。`, () => startFinancialListening("landing", movedSession));
+          if (movedSession.voiceEnabled) speak(`${landingTile.name}已抵押，本次免租。说继续。`, () => startFinancialListening("landing", movedSession));
         } else if (activePlayer.cash >= rent) {
           const transfer = transferRent(movedSession, landingTile);
           const paidSession = transfer?.session ?? movedSession;
@@ -1281,14 +1281,14 @@ export function GameSessionScreen({
           landingDecisionRef.current = decision;
           setLandingDecision(decision);
           changeTurnPhase("deciding");
-          if (paidSession.voiceEnabled) speak(`${arrivalSentence}。已向${ownership.player.name}支付${rent}金币租金。说继续即可结束回合。`, () => startFinancialListening("landing", paidSession));
+          if (paidSession.voiceEnabled) speak(`${landingTile.name}，已付${rent}租金。说继续。`, () => startFinancialListening("landing", paidSession));
         } else {
           decision = { kind: "rent-due", cityId: landingTile.id, rent, ownerName: ownership.player.name, shortage: rent - activePlayer.cash };
           landingDecisionRef.current = decision;
           setLandingDecision(decision);
           changeTurnPhase("rescue");
           setAssetManagerOpen(true);
-          if (movedSession.voiceEnabled) speak(`${arrivalSentence}。需要支付${rent}金币租金，目前还差${rent - activePlayer.cash}金币。请查看资产，可以卖房、卖地或抵押。`, () => startFinancialListening("assets", movedSession));
+          if (movedSession.voiceEnabled) speak(`${landingTile.name}租金${rent}，还差${rent - activePlayer.cash}。请处理资产。`, () => startFinancialListening("assets", movedSession));
         }
       }
     }, quickly || reducedMotion ? 260 : 850);
@@ -1485,7 +1485,7 @@ export function GameSessionScreen({
     setFinancialAction(action);
     stopVoiceListening();
     if (sessionRef.current.voiceEnabled) {
-      speak(`${action.label}。这是资产操作，请说确认或者取消。`, () => startFinancialListening("confirm", sessionRef.current));
+      speak(`${action.label}。确认还是取消？`, () => startFinancialListening("confirm", sessionRef.current));
     }
   };
 
